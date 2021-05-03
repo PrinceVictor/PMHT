@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from src.generator.generator import SimulationGenerator
-from src.config import gen_cfg
+from generator.generator import SimulationGenerator
+from config import gen_cfg
 
 
 class DrawSimTarget:

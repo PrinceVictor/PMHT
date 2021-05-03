@@ -5,7 +5,7 @@ import matplotlib.colors
 import os
 import sys
 import time
-from src.utils.preprocess import load_dp
+from utils.preprocess import load_dp
 
 
 class DrawRawData:

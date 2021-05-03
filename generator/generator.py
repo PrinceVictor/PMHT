@@ -6,9 +6,9 @@ import numpy as np
 import math
 import argparse
 
-from src.utils.rotate import direction_cosine_matrix3x3 as rotate3x3
-from src.utils.motion_model import cv_state_trans_matrix as cv_model
-from src.utils.logger import setup_logger
+from utils.rotate import direction_cosine_matrix3x3 as rotate3x3
+from utils.motion_model import cv_state_trans_matrix as cv_model
+from utils.logger import setup_logger
 # from src.config import gen_cfg as cfg
 
 parser = argparse.ArgumentParser(description='data generator')
@@ -98,7 +98,7 @@ class SimulationGenerator:
         # print("target init state:\n{}".format(target_init_state))
         return target_init_state
 
-    def noise_generator(self):
+    # def noise_generator(self):
 
 
 

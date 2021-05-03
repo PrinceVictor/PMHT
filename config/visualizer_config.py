@@ -20,4 +20,4 @@ _C.RAW_VIS.start_circle = 1
 _C.SIM_VIS = CN()
 _C.SIM_VIS.ENABLE = True
 
-_C.SIM_VIS.yaml_file = "config/gen.yaml"
+_C.SIM_VIS.yaml_file = "param/gen.yaml"

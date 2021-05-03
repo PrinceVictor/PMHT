@@ -1,14 +1,14 @@
 import numpy as np
 import argparse
 
-import src.visualizer.raw_data_vis as raw_vis
-import src.visualizer.simulate_data_vis as sim_vis
+import visualizer.raw_data_vis as raw_vis
+import visualizer.simulate_data_vis as sim_vis
 
-from src.utils.logger import setup_logger
-from src.config import vis_cfg as cfg
+from utils.logger import setup_logger
+from config import vis_cfg as cfg
 
 parser = argparse.ArgumentParser(description='visualizer tool')
-parser.add_argument('--config-file', type=str, default="config/vis.yaml",
+parser.add_argument('--config-file', type=str, default="param/vis.yaml",
                     help='source file path')
 parser.add_argument('--src-data', type=str, default="data/preprocessed/narrow_data/raw.csv",
                     help='source file path')
