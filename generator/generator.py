@@ -53,7 +53,7 @@ class SimulationGenerator:
         for state_idx in range(1, total_state_time_seq_nums):
             for target_idx in range(n):
                 target_state[target_idx] = \
-                    cv_model(1 / self.target_params.frequency) *\
+                    cv_model(1 / self.target_params.frequency, state_dims=3, space_dims=3) *\
                     target_state_list[state_idx - 1][target_idx]
             target_state_list.append(target_state)
 
