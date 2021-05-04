@@ -11,13 +11,6 @@ from utils.motion_model import cv_state_trans_matrix as cv_model
 from utils.logger import setup_logger
 # from src.config import gen_cfg as cfg
 
-parser = argparse.ArgumentParser(description='data generator')
-parser.add_argument('--config-file', type=str, default="config/gen.yaml",
-                    help='source file path')
-
-args = parser.parse_args()
-
-
 class SimulationGenerator:
     def __init__(self, cfg=None):
         assert cfg is not None, 'parameter cfg is none!'
@@ -38,7 +31,6 @@ class SimulationGenerator:
 
         target_state = np.zeros(shape=(n, d, 1), dtype=np.float)
         target_state_list = [target_init_state]
-        print(len(target_state_list))
 
         for state_idx in range(1, total_state_time_seq_nums):
             for target_idx in range(n):
@@ -106,6 +98,10 @@ class SimulationGenerator:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='data generator')
+    parser.add_argument('--config-file', type=str, default="config/gen.yaml",
+                    help='source file path')
+    args = parser.parse_args()
 
     cfg.merge_from_file(args.config_file)
     cfg.freeze()
