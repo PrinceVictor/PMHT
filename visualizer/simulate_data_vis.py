@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from generator.generator import SimulationGenerator
-from config import gen_cfg
+from src.generator.generator import SimulationGenerator
+from src.config import gen_cfg
 
 
 class DrawSimTarget:
@@ -19,27 +19,25 @@ class DrawSimTarget:
         self.sim_gen = SimulationGenerator(cfg=gen_cfg)
 
     def run(self):
-        target_state = self.sim_gen.target_state_generator()
-        """
-        @target_state: time_index, nums, state
-        """
-        print(len(target_state))
+        target_state, noises, total_data = self.sim_gen.total_data_vis_obtain()
 
-        # self.visualizer_2d(target_state)
+        self.total_vis_2d(total_data)
 
 
-    def visualizer_2d(self, state):
+    def total_vis_2d(self, data):
 
         fig = plt.figure()
         ax = plt.axes()
+        self.draw_all(data, ax=ax)
 
-        for index, curr_state in enumerate(state):
-            if self.scene_dimension == 2:
-                self.draw_once(curr_state, ax)
+    def draw_all(self, data, ax):
+        ax.set_xlim(self.scene_area_x[0], self.scene_area_x[1])
+        ax.set_ylim(self.scene_area_y[0], self.scene_area_y[1])
 
-            plt.pause(1.0 / self.vis_freq)
-            
-            # raise SystemExit
+        data = np.concatenate(data, axis=0)
+
+        ax.scatter(x=data[:, 0, :], y=data[:, 1, :], s=0.5)
+        plt.show()
 
     def draw_once(self, data, ax):
         # plt.cla()

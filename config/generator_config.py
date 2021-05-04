@@ -43,6 +43,9 @@ _C.TARGET.area = [[-0.5e5+_C.RADAR.pos[0], 0.5e5+_C.RADAR.pos[0]],
                   [0.2e4+_C.RADAR.pos[1], 1e5+_C.RADAR.pos[1]],
                   [0.0e5+_C.RADAR.pos[2], _C.SCENE.height]]
 
+_C.FALSE_ALARM = CN()
+_C.FALSE_ALARM.expect_x = 10
+
 def get_cfg_defaults():
 
   """Get a yacs CfgNode object with default values for my_project."""
