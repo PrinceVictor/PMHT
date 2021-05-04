@@ -6,16 +6,10 @@ import numpy as np
 import math
 import argparse
 
-from src.utils.rotate import direction_cosine_matrix3x3 as rotate3x3
-from src.utils.motion_model import cv_state_trans_matrix as cv_model
-from src.utils.logger import setup_logger
-from src.config import gen_cfg as cfg
-
-parser = argparse.ArgumentParser(description='data generator')
-parser.add_argument('--config-file', type=str, default="config/gen.yaml",
-                    help='source file path')
-
-args = parser.parse_args()
+from utils.rotate import direction_cosine_matrix3x3 as rotate3x3
+from utils.motion_model import cv_state_trans_matrix as cv_model
+from utils.logger import setup_logger
+from config import gen_cfg as cfg
 
 
 class SimulationGenerator:
@@ -26,7 +20,7 @@ class SimulationGenerator:
         self.radar_params = cfg.RADAR
         self.false_alarm_params = cfg.FALSE_ALARM
 
-    def total_data_vis_obtain(self, target_nums=None, total_times=None, lamda_para=None):
+    def total_data_obtain(self, target_nums=None, total_times=None, lamda_para=None):
         target_state = self.target_state_generator(target_nums, total_times)
         noises = self.noise_generator(lamda_para, total_times)
 
@@ -146,12 +140,13 @@ class SimulationGenerator:
 
 
 
-
-
-
-
-
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description='data generator')
+    parser.add_argument('--config-file', type=str, default="config/gen.yaml",
+                        help='source file path')
+
+    args = parser.parse_args()
 
     cfg.merge_from_file(args.config_file)
     cfg.freeze()

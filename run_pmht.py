@@ -26,7 +26,7 @@ if __name__ == '__main__':
         LOG = setup_logger(__file__)
     
     sim_gen = SimulationGenerator(cfg=cfg)
-    sim_gen.target_state_generator()
+    target_state, noises, total_data = sim_gen.total_data_obtain()
 
     
         
