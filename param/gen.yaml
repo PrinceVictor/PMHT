@@ -19,7 +19,7 @@ TARGET:
 # start pos mode: random fix
   start_pos_mode: "random"
   state: "CV"
-  time: 60
+  time: 600
   nums: 1
 
 

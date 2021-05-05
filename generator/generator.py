@@ -45,7 +45,7 @@ class SimulationGenerator:
         if total_times is None:
             total_times = self.target_params.time
 
-        total_state_time_seq_nums = total_times * self.target_params.frequency
+        total_state_time_seq_nums = int(total_times * self.target_params.frequency)
         target_init_state = self.target_init_generator(target_nums)
         n, d, _ = target_init_state.shape
 
@@ -119,8 +119,8 @@ class SimulationGenerator:
             lambda_para = self.false_alarm_params.expect_x
         if total_times is None:
             total_times = self.target_params.time
-        total_state_time_seq_nums = total_times * self.target_params.frequency
 
+        total_state_time_seq_nums = int(total_times * self.target_params.frequency)
         total_noise_nums = np.random.poisson(lam=lambda_para,
                                              size=total_state_time_seq_nums)
         total_noise_list = []

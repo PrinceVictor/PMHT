@@ -14,7 +14,7 @@ def get_process_noise_matrix(delta_t, sigma=0.01):
     
     return Q
 
-def get_process_noise_matrix(sigma=100):
+def get_measurement_noise_matrix(sigma=100):
     R = np.power(sigma, 2) * np.mat(np.eye(2, dtype=np.float))
     
     return R

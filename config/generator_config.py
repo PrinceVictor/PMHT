@@ -26,7 +26,7 @@ _C.RADAR.pos = [0, 0, 0]
 _C.RADAR.min_degree = -60
 _C.RADAR.max_degree = 60
 _C.RADAR.period = 10
-_C.RADAR.frequency = 1/_C.RADAR.period
+_C.RADAR.frequency = 1.0/_C.RADAR.period
 _C.RADAR.max_dist = 8e4
 _C.RADAR.min_dist = 0.3e4
 
@@ -35,7 +35,7 @@ _C.TARGET = CN()
 _C.TARGET.start_pos_mode = "fix"
 _C.TARGET.state = "CV"
 _C.TARGET.time = 1*60
-_C.TARGET.frequency =  1/_C.RADAR.period
+_C.TARGET.frequency =  1.0/_C.RADAR.period
 _C.TARGET.nums = 1
 _C.TARGET.start_speed = 30*1.85/3.6
 # area sequence x y z
