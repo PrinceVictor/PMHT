@@ -22,11 +22,11 @@ class PMHT:
     def target_init(self, measurements):
         print("Target init!")
         
-        target_state = np.zeros((measurements.shape[0], 6, 1), 
+        target_state = np.zeros((measurements.shape[0], 4, 1), 
                                 dtype=np.float)
         for index, meas in enumerate(measurements):
             target_state[index, 0] = meas[0]
-            target_state[index, 3] = meas[1]
+            target_state[index, 2] = meas[1]
 
     def get_prior_prob(self, t, measurements):
         print("Compute prior probabilities!")
