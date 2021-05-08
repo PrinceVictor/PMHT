@@ -55,7 +55,7 @@ class SimulationGenerator:
         for state_idx in range(1, total_state_time_seq_nums):
             for target_idx in range(n):
                 target_state[target_idx] = \
-                    cv_model(1 / self.target_params.frequency, state_dims=3, space_dims=3) *\
+                    cv_model(1 / self.target_params.frequency, state_dims=3, space_dims=3) @\
                     target_state_list[state_idx - 1][target_idx]
             target_state_list.append(target_state)
 
@@ -102,8 +102,8 @@ class SimulationGenerator:
                                                  "pitch": -init_target_direction[nums_index][-2],
                                                  "roll": -init_target_direction[nums_index][-3]})
 
-            world_init_speed = speed_rotate_matrix * body_init_speed
-            world_init_pos = pos_rotate_matrix * body_init_pos
+            world_init_speed = speed_rotate_matrix @ body_init_speed
+            world_init_pos = pos_rotate_matrix @ body_init_pos
 
             for dims in range(3):
                 target_init_state[nums_index, dims * 3] = world_init_pos[dims]

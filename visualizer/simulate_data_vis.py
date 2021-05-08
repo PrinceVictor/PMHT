@@ -16,12 +16,21 @@ class DrawSimTarget:
         self.scene_area_z = self.gen_cfg.SCENE.area_z
         self.vis_freq = self.gen_cfg.TARGET.frequency
 
-        self.sim_gen = SimulationGenerator(cfg=gen_cfg)
+        # self.sim_gen = SimulationGenerator(cfg=gen_cfg)
 
     def run(self):
-        target_state, noises, total_data = self.sim_gen.total_data_vis_obtain()
+        # target_state, noises, total_data = self.sim_gen.total_data_vis_obtain()
 
         self.total_vis_2d(total_data)
+    
+    def run_pmht(self, total_raw, gt, track):
+
+        fig = plt.figure()
+        ax = plt.axes()
+        
+        self.draw_all(total_raw, ax=ax, c='blue', marker='o')
+        self.draw_all(gt, ax=ax, c='green', marker='^')
+        self.draw_all(track, ax=ax, c='red', marker='x')
 
 
     def total_vis_2d(self, data):
@@ -30,13 +39,13 @@ class DrawSimTarget:
         ax = plt.axes()
         self.draw_all(data, ax=ax)
 
-    def draw_all(self, data, ax):
+    def draw_all(self, data, ax, c='red', marker='o'):
         ax.set_xlim(self.scene_area_x[0], self.scene_area_x[1])
         ax.set_ylim(self.scene_area_y[0], self.scene_area_y[1])
 
         data = np.concatenate(data, axis=0)
 
-        ax.scatter(x=data[:, 0, :], y=data[:, 1, :], s=0.5)
+        ax.scatter(x=data[:, 0, :], y=data[:, 1, :], s=0.5, marker=marker, c=c)
         plt.show()
 
     def draw_once(self, data, ax):

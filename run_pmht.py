@@ -3,6 +3,7 @@ import argparse
 
 from pmht.pmht import PMHT
 from generator.generator import SimulationGenerator
+from visualizer.simulate_data_vis import DrawSimTarget
 
 from utils.logger import setup_logger
 from config import gen_cfg as cfg
@@ -24,9 +25,12 @@ def main(cfg, LOG):
     pmht_mananger = PMHT(times=len(total_data))
     for t_idx, data in enumerate(total_data):
         pmht_mananger.run(t_idx, data)
+    
+    track_info = pmht_mananger.get_track_info()
 
-        if t_idx >= 1:
-            raise SystemExit
+    draw = DrawSimTarget(cfg=cfg)
+    draw.run_pmht(total_data, target_state, track_info)
+        
 
 if __name__ == '__main__':
     print(args)

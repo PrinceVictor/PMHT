@@ -1,4 +1,6 @@
 import numpy as np
+
+from numpy.linalg import inv, det
 from scipy.stats import poisson, norm
 
 from .kalman import *
@@ -11,7 +13,7 @@ def compute_norm_prob(z, y, R):
     y = np.mat(y)
     R = np.mat(R)
     
-    return 1/(2*np.pi*np.power(np.linalg.det(R), 0.5))*np.exp(np.array(-0.5*(z-y).T*R.I*(z-y))[0][0])
+    return 1/(2*np.pi*np.power(det(R), 0.5))*np.exp(np.array(-0.5*(z-y).T@inv(R)@(z-y))[0][0])
 
 def compute_poisson_prob(expect, k):
     return poisson.pmf(k, expect)
@@ -26,7 +28,7 @@ class PMHT:
 
         self.target_state = [None]*times
         self.P = [None]*times
-        self.Q = get_process_noise_matrix(self.delta_t, sigma=0.01)
+        self.Q = np.round(get_process_noise_matrix(self.delta_t, sigma=1))
         self.R = get_measurement_noise_matrix(sigma=500)
         self.H = measurement_matrix()
     
@@ -42,11 +44,7 @@ class PMHT:
         self.target_state[0] = target_state
         
     def run(self, t_idx, measurements):
-        print("Runing PMHT")
-        
-        print(f"t index: {t_idx}")
-        print(measurements.shape)
-        # print(measurements)
+        print("Runing PMHT T:{t_idx}")
 
         if t_idx == 0:
             self.pmht_init(measurements)
@@ -62,20 +60,40 @@ class PMHT:
 
             w_nsr = self.calculate_weight_s(t_idx, x_predicts, P_predicts, measurements)
             zs, Rs = self.calculate_measures_and_covariance(w_nsr, measurements)
+            x_est, P_est = self.em_iteration(t_idx, x_predicts, P_predicts, zs, Rs)
+
+            self.target_state[t_idx] = x_est
+            self.P[t_idx] = P_est
     
+    def get_track_info(self):
+        return self.target_state
 
     def em_iteration(self, t_idx, x_predicts, P_predicts, zs, Rs):
 
-        for ids in range(len(x_predicts)):
-            x = x_predicts[idx_s]
-            P = P_predicts[idx_s]
-            z = zs[idx_s]
-            R = Rs[idx_s]
-            print(x.shape)
-            print(P.shape)
-            print(z.shape)
-            print(R.shape)
-            
+        x_est = np.zeros((len(x_predicts), 4, 1), dtype=np.float)
+        P_est = np.zeros((len(x_predicts), 4, 4), dtype=np.float)
+        
+        for idx_s in range(len(x_predicts)):
+
+            while True:
+                x = x_predicts[idx_s]
+                P = P_predicts[idx_s]
+                z = zs[idx_s]
+                R = Rs[idx_s]
+                
+                x1, P1 = state_update(x, P, z, R)
+                
+                cost = (x1-x).T @ inv(self.Q) @ (x1-x)
+
+                x_predicts[idx_s] = x1
+                P_predicts[idx_s] = P1
+
+                if cost <= 0.01:
+                    x_est[idx_s] = x1
+                    P_est[idx_s] = P1
+                    break
+        
+        return x_est, P_est
 
     def calculate_measures_and_covariance(self, w_nsr, measurements):
         print("synthetic measurements")
@@ -89,11 +107,13 @@ class PMHT:
                 temp_z += wnsr*measurements[idx_r]
             
             sum_wns = np.sum(wns)
-            temp_z = temp_z/sum_wns
-            temp_R = self.R/sum_wns
 
-            zs.append(temp_z)
-            Rs.append(temp_R)
+            if sum_wns != 0:
+                temp_z = temp_z/sum_wns
+                temp_R = self.R/sum_wns
+
+                zs.append(temp_z)
+                Rs.append(temp_R)
         
         return zs, Rs
 
@@ -125,7 +145,6 @@ class PMHT:
             w_nsr.append(w_sr)
 
         return w_nsr
-
     
     def get_prior_prob(self, t, measurements):
         print("Compute prior probabilities!")
