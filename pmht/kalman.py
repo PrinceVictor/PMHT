@@ -2,7 +2,7 @@ import numpy as np
 
 from utils.motion_model import cv_state_trans_matrix
 
-def measurement_matrix(state_dims=2, space_dims=2):
+def measurement_matrix():
     return np.mat([[1, 0, 0, 0],
                    [0, 0, 1, 0]], dtype=np.float)
 
@@ -29,7 +29,7 @@ def state_predict(x, P, Q, delta_t):
 
 def state_update(x_predict, P_predict, z, R):
     
-    H = measurement_matrix(2, 2)
+    H = measurement_matrix()
     k_gain = P_predict * H.T * (H * P_predict * H.T + R).I
     x_estimate = x_predict + k_gain * (z - H*x_predict)
     P_estimate = P_predict - k_gain*H*P_predict

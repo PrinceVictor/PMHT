@@ -25,7 +25,8 @@ def main(cfg, LOG):
     for t_idx, data in enumerate(total_data):
         pmht_mananger.run(t_idx, data)
 
-        raise SystemExit
+        if t_idx >= 1:
+            raise SystemExit
 
 if __name__ == '__main__':
     print(args)
@@ -37,7 +38,7 @@ if __name__ == '__main__':
         LOG = setup_logger(__file__, True, "./log/")
     else:
         LOG = setup_logger(__file__)
-
+    
     main(cfg, LOG)
     
 

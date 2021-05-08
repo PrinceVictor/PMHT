@@ -10,7 +10,8 @@ def compute_norm_prob(z, y, R):
     z = np.mat(z)
     y = np.mat(y)
     R = np.mat(R)
-    return 1/(np.power(2*np.pi, 2)*np.linalg.det(R))*np.exp(-0.5*(z-y).T*R.I*(z-y))
+    
+    return 1/(2*np.pi*np.power(np.linalg.det(R), 0.5))*np.exp(np.array(-0.5*(z-y).T*R.I*(z-y))[0][0])
 
 def compute_poisson_prob(expect, k):
     return poisson.pmf(k, expect)
@@ -20,25 +21,25 @@ class PMHT:
     def __init__(self, times):
         print("Construct PMHT!")
         self.noise_expected = 10
-        self.meas_frequency = 0.1
+        self.meas_frequency = 0.2
         self.delta_t = 1/self.meas_frequency
 
         self.target_state = [None]*times
         self.P = [None]*times
         self.Q = get_process_noise_matrix(self.delta_t, sigma=0.01)
-        self.R = get_measurement_noise_matrix(sigma=100)
+        self.R = get_measurement_noise_matrix(sigma=500)
+        self.H = measurement_matrix()
     
     def pmht_init(self, measurements):
         print("PMHT target init!")
         
-        target_state = np.mat(np.zeros((measurements.shape[0], 4, 1), dtype=np.float))
-        self.P[0] = np.mat(np.zeros((measurements.shape[0], 4, 4), dtype=np.float))
-        for index, meas in enumerate(measurements):
-            target_state[index, 0] = meas[0]
-            target_state[index, 2] = meas[1]
+        target_state = np.zeros((measurements.shape[0], 4, 1), dtype=np.float)
+        self.P[0] = np.zeros((measurements.shape[0], 4, 4), dtype=np.float)
         
+        for index, meas in enumerate(measurements):
+            target_state[index, 0, 0] = meas[0]
+            target_state[index, 2, 0] = meas[1]
         self.target_state[0] = target_state
-
         
     def run(self, t_idx, measurements):
         print("Runing PMHT")
@@ -50,32 +51,92 @@ class PMHT:
         if t_idx == 0:
             self.pmht_init(measurements)
         else:
-            x_predict, P_predict = state_predict(self.target_state, self.P, self.Q, self.delta_t)
+            x_predicts = []
+            P_predicts = []
+            for idx in range(len(self.target_state[t_idx-1])):
+                x = np.mat(self.target_state[t_idx-1][idx])
+                p = np.mat(self.P[t_idx-1][idx])
+                x, p = state_predict(x, p, self.Q, self.delta_t)
+                x_predicts.append(x)
+                P_predicts.append(p)
 
-            self.calculate_weight_s(t_idx, x_predict, measurements)
+            w_nsr = self.calculate_weight_s(t_idx, x_predicts, P_predicts, measurements)
+            zs, Rs = self.calculate_measures_and_covariance(w_nsr, measurements)
     
 
-    def calculate_weight_s(self, t_idx, x_predict, measurements):
+    def em_iteration(self, t_idx, x_predicts, P_predicts, zs, Rs):
+
+        for ids in range(len(x_predicts)):
+            x = x_predicts[idx_s]
+            P = P_predicts[idx_s]
+            z = zs[idx_s]
+            R = Rs[idx_s]
+            print(x.shape)
+            print(P.shape)
+            print(z.shape)
+            print(R.shape)
+            
+
+    def calculate_measures_and_covariance(self, w_nsr, measurements):
+        print("synthetic measurements")
+
+        zs = []
+        Rs = []
+        for idx_s, wns in enumerate(w_nsr):
+
+            temp_z = np.mat(np.zeros((2, 1), dtype=np.float))
+            for idx_r, wnsr in enumerate(wns):
+                temp_z += wnsr*measurements[idx_r]
+            
+            sum_wns = np.sum(wns)
+            temp_z = temp_z/sum_wns
+            temp_R = self.R/sum_wns
+
+            zs.append(temp_z)
+            Rs.append(temp_R)
+        
+        return zs, Rs
+
+    def calculate_weight_s(self, t_idx, x_predicts, P_predicts, measurements):
         print("Target update!")
         
-        pi_s = get_prior_prob(t_idx, measurements)
-        for idx_r, per_meas in enumerate(measurements):
+        pi_s = self.get_prior_prob(t_idx, measurements)
 
-            w_lr_list = []
-            for idx_l, per_target in enumerate(x_predict):
-                compute_norm_prob(z, y, R)
+        w_nsr_list = []
+        for idx_r, z in enumerate(measurements):
+
+            w_sr_list = []
+            for idx_s, x in enumerate(x_predicts):
+                
+                w_sr_num = pi_s*compute_norm_prob(z, self.H*x, self.R)
+                w_sr_list.append(w_sr_num)
+
+            w_sr_den = np.sum(w_sr_list)
+            if w_sr_den != 0:
+                w_sr_list = w_sr_list/w_sr_den
+            
+            w_nsr_list.append(w_sr_list)
+        
+        w_nsr = []
+        for idx_s in range(len(x_predicts)):
+            w_sr = []
+            for idx_r in range(len(measurements)):
+                w_sr.append(w_nsr_list[idx_r][idx_s])
+            w_nsr.append(w_sr)
+
+        return w_nsr
 
     
     def get_prior_prob(self, t, measurements):
         print("Compute prior probabilities!")
 
         meas_size = measurements.shape[0]
-        target_size = self.target[t-1].shape[0]
+        target_size = self.target_state[t-1].shape[0]
         expect_mu = self.noise_expected
 
-        pd = get_detection_prob(meas_size, target_size)
-        p_meas_size = compute_prior_prob(expect_mu, meas_size)
-        p_meas_tag = compute_prior_prob(expect_mu, np.max((meas_size-target_size, 0)))
+        pd = compute_detection_prob(meas_size, target_size)
+        p_meas_size = compute_poisson_prob(expect_mu, meas_size)
+        p_meas_tag = compute_poisson_prob(expect_mu, np.max((meas_size-target_size, 0)))
         
         pi_s = pd/meas_size*p_meas_tag/(pd*p_meas_tag + (1-pd)*p_meas_size)
         
