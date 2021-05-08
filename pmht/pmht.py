@@ -44,7 +44,7 @@ class PMHT:
         self.target_state[0] = target_state
         
     def run(self, t_idx, measurements):
-        print("Runing PMHT T:{t_idx}")
+        print(f"Runing PMHT T:{t_idx}")
 
         if t_idx == 0:
             self.pmht_init(measurements)
@@ -52,8 +52,8 @@ class PMHT:
             x_predicts = []
             P_predicts = []
             for idx in range(len(self.target_state[t_idx-1])):
-                x = np.mat(self.target_state[t_idx-1][idx])
-                p = np.mat(self.P[t_idx-1][idx])
+                x = self.target_state[t_idx-1][idx]
+                p = self.P[t_idx-1][idx]
                 x, p = state_predict(x, p, self.Q, self.delta_t)
                 x_predicts.append(x)
                 P_predicts.append(p)
@@ -80,17 +80,22 @@ class PMHT:
                 P = P_predicts[idx_s]
                 z = zs[idx_s]
                 R = Rs[idx_s]
-                
-                x1, P1 = state_update(x, P, z, R)
-                
-                cost = (x1-x).T @ inv(self.Q) @ (x1-x)
 
-                x_predicts[idx_s] = x1
-                P_predicts[idx_s] = P1
+                if z is not None:
+                
+                    x1, P1 = state_update(x, P, z, R)
+                    cost = (x1-x).T @ inv(self.Q) @ (x1-x)
 
-                if cost <= 0.01:
-                    x_est[idx_s] = x1
-                    P_est[idx_s] = P1
+                    x_predicts[idx_s] = x1
+                    P_predicts[idx_s] = P1
+
+                    if cost <= 0.01:
+                        x_est[idx_s] = x1
+                        P_est[idx_s] = P1
+                        break
+                else:
+                    x_est[idx_s] = x
+                    P_est[idx_s] = P
                     break
         
         return x_est, P_est
@@ -98,8 +103,8 @@ class PMHT:
     def calculate_measures_and_covariance(self, w_nsr, measurements):
         print("synthetic measurements")
 
-        zs = []
-        Rs = []
+        zs = [None]*len(w_nsr)
+        Rs = [None]*len(w_nsr)
         for idx_s, wns in enumerate(w_nsr):
 
             temp_z = np.mat(np.zeros((2, 1), dtype=np.float))
@@ -112,8 +117,8 @@ class PMHT:
                 temp_z = temp_z/sum_wns
                 temp_R = self.R/sum_wns
 
-                zs.append(temp_z)
-                Rs.append(temp_R)
+                zs[idx_s] = temp_z
+                Rs[idx_s] = temp_R
         
         return zs, Rs
 
@@ -128,7 +133,7 @@ class PMHT:
             w_sr_list = []
             for idx_s, x in enumerate(x_predicts):
                 
-                w_sr_num = pi_s*compute_norm_prob(z, self.H*x, self.R)
+                w_sr_num = pi_s*compute_norm_prob(z, self.H@x, self.R)
                 w_sr_list.append(w_sr_num)
 
             w_sr_den = np.sum(w_sr_list)

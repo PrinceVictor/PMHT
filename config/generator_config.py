@@ -37,7 +37,7 @@ _C.TARGET.state = "CV"
 _C.TARGET.time = 1*60
 _C.TARGET.frequency =  1.0/_C.RADAR.period
 _C.TARGET.nums = 1
-_C.TARGET.start_speed = 30*1.85/3.6
+_C.TARGET.start_speed = 2000*1.85/3.6
 # area sequence x y z
 _C.TARGET.area = [[-0.5e5+_C.RADAR.pos[0], 0.5e5+_C.RADAR.pos[0]],
                   [0.2e4+_C.RADAR.pos[1], 1e5+_C.RADAR.pos[1]],

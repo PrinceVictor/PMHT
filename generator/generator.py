@@ -49,14 +49,15 @@ class SimulationGenerator:
         target_init_state = self.target_init_generator(target_nums)
         n, d, _ = target_init_state.shape
 
-        target_state = np.zeros(shape=(n, d, 1), dtype=np.float)
         target_state_list = [target_init_state]
 
         for state_idx in range(1, total_state_time_seq_nums):
+            target_state = np.zeros(shape=(n, d, 1), dtype=np.float)
             for target_idx in range(n):
                 target_state[target_idx] = \
-                    cv_model(1 / self.target_params.frequency, state_dims=3, space_dims=3) @\
+                    cv_model(1 / self.target_params.frequency, state_dims=3, space_dims=3) @ \
                     target_state_list[state_idx - 1][target_idx]
+
             target_state_list.append(target_state)
 
         return target_state_list
@@ -65,7 +66,7 @@ class SimulationGenerator:
         # initialize speed direction YAW ROLL PITCH
         init_speed_direction = np.random.uniform(low=0, high=np.pi * 2,
                                                  size=(target_nums, 3))
-        init_speed = np.random.uniform(low=0, high=self.target_params.start_speed,
+        init_speed = np.random.uniform(low=self.target_params.start_speed*0.75, high=self.target_params.start_speed,
                                        size=(target_nums, 1))
 
         init_target_direction = np.random.uniform(low=np.deg2rad(self.radar_params.min_degree + 15),
