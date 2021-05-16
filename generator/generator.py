@@ -20,6 +20,8 @@ class SimulationGenerator:
         self.radar_params = cfg.RADAR
         self.false_alarm_params = cfg.FALSE_ALARM
 
+        self.scene_area = self.scene_params.width*self.scene_params.height
+
     def total_data_obtain(self, target_nums=None, total_times=None, lamda_para=None):
         target_state = self.target_state_generator(target_nums, total_times)
         noises = self.noise_generator(lamda_para, total_times)
@@ -117,7 +119,7 @@ class SimulationGenerator:
     def noise_generator(self, lambda_para=None, total_times=None):
 
         if lambda_para is None:
-            lambda_para = self.false_alarm_params.expect_x
+            lambda_para = self.noise_expected()
         if total_times is None:
             total_times = self.target_params.time
 
@@ -139,6 +141,9 @@ class SimulationGenerator:
             total_noise_list.append(curr_noise)
 
         return total_noise_list
+    
+    def noise_expected(self):
+        return self.false_alarm_params.expect_x_per_uint*self.scene_area
 
 
 

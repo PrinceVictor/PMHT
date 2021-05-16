@@ -44,7 +44,7 @@ _C.TARGET.area = [[-0.5e5+_C.RADAR.pos[0], 0.5e5+_C.RADAR.pos[0]],
                   [0.0e5+_C.RADAR.pos[2], _C.SCENE.height]]
 
 _C.FALSE_ALARM = CN()
-_C.FALSE_ALARM.expect_x = 10
+_C.FALSE_ALARM.expect_x_per_uint = 10**-5.5
 
 def get_cfg_defaults():
 

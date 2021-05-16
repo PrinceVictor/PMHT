@@ -9,22 +9,18 @@ def compute_detection_prob(meas_size, target_size):
     return 1.0 if meas_size>= target_size else meas_size/target_size
 
 def compute_norm_prob(z, y, R):
-    z = np.mat(z)
-    y = np.mat(y)
-    R = np.mat(R)
-    
-    return 1/(2*np.pi*np.power(det(R), 0.5))*np.exp(np.array(-0.5*(z-y).T@inv(R)@(z-y))[0][0])
+
+    return 1/(2*np.pi*(det(R)**0.5))*np.exp(np.array(-0.5*(z-y).T@inv(R)@(z-y))[0][0])
 
 def compute_poisson_prob(expect, k):
     return poisson.pmf(k, expect)
 
 
 class PMHT:
-    def __init__(self, times):
+    def __init__(self, times, noise_expected=10, sample_T=5):
         print("Construct PMHT!")
-        self.noise_expected = 10
-        self.meas_frequency = 0.2
-        self.delta_t = 1/self.meas_frequency
+        self.noise_expected = noise_expected
+        self.delta_t = sample_T
 
         self.target_state = [None]*times
         self.P = [None]*times
