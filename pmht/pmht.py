@@ -24,8 +24,10 @@ class PMHT:
 
         self.target_state = [None]*times
         self.P = [None]*times
-        self.Q = np.round(get_process_noise_matrix(self.delta_t, sigma=1))
-        self.R = get_measurement_noise_matrix(sigma=500)
+        self.Q = np.round(get_process_noise_matrix(self.delta_t, sigma=0.85))
+        print(self.Q)
+        self.R = get_measurement_noise_matrix(sigma=10)
+        print(self.R)
         self.H = measurement_matrix()
     
     def pmht_init(self, measurements):
