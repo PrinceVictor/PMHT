@@ -23,19 +23,22 @@ def main(cfg, LOG):
     target_state, noises, total_data = sim_gen.total_data_obtain()
     noise_expected = sim_gen.noise_expected()
 
-    LOG.info(f"total times {len(total_data)}")
+    print(noise_expected)
 
-    pmht_mananger = PMHT(times=len(total_data), 
-                         noise_expected=noise_expected,
-                         sample_T=cfg.RADAR.period)
+    # LOG.info(f"total times {len(total_data)}")
 
-    for t_idx, data in enumerate(total_data):
-        pmht_mananger.run(t_idx, data)
+    # pmht_mananger = PMHT(times=len(total_data), 
+    #                      noise_expected=noise_expected,
+    #                      sample_T=cfg.RADAR.period)
+
+    # for t_idx, data in enumerate(total_data):
+    #     pmht_mananger.run(t_idx, data)
     
-    track_info = pmht_mananger.get_track_info()
+    # track_info = pmht_mananger.get_track_info()
 
     draw = DrawSimTarget(cfg=cfg)
-    draw.run_pmht(total_data, target_state, track_info)
+    # draw.run_pmht(total_data, target_state, track_info)
+    draw.run_pmht(total_data, target_state)
         
 
 if __name__ == '__main__':

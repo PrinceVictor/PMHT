@@ -20,7 +20,7 @@ class SimulationGenerator:
         self.radar_params = cfg.RADAR
         self.false_alarm_params = cfg.FALSE_ALARM
 
-        self.scene_area = self.scene_params.width*self.scene_params.height
+        self.scene_area = self.scene_params.width*self.scene_params.length
 
     def total_data_obtain(self, target_nums=None, total_times=None, lamda_para=None):
         target_state = self.target_state_generator(target_nums, total_times)

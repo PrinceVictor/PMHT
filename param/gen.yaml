@@ -1,26 +1,26 @@
-LOG_CONFIG:
-  log: FALSE
-  time: FALSE
+# LOG_CONFIG:
+#   log: FALSE
+#   time: FALSE
 
-SCENE:
-  dimension: 2
-  coordinate: "ENU"
-  shape: "square"
-  length: 2e5
-  width: 2e5
-  height: 3e4
+# SCENE:
+#   dimension: 2
+#   coordinate: "ENU"
+#   shape: "square"
+#   length: 2e5
+#   width: 2e5
+#   height: 3e4
 
-RADAR:
-  pos: (1e5, 0, 0)
-  min_degree: -60
-  max_degree: 60
+# RADAR:
+#   pos: (1e5, 0, 0)
+#   min_degree: -60
+#   max_degree: 60
 
-TARGET:
-# start pos mode: random fix
-  start_pos_mode: "random"
-  state: "CV"
-  time: 100
-  nums: 1
+# TARGET:
+# # start pos mode: random fix
+#   start_pos_mode: "random"
+#   state: "CV"
+#   time: 100
+#   nums: 1
 
 
 
