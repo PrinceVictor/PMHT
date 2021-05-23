@@ -17,34 +17,63 @@ def compute_poisson_prob(expect, k):
 
 
 class PMHT:
-    def __init__(self, times, noise_expected=10, sample_T=5):
+    def __init__(self, times, batch_T=1, noise_expected=10, sample_T=5):
         print("Construct PMHT!")
+        self.batch_Tg = batch_T
+        self.batch_Tb = self.batch_Tg + 2
         self.noise_expected = noise_expected
         self.delta_t = sample_T
 
         self.target_state = [None]*times
+        self.meas_buff = []
+        self.t_buff = []
         self.P = [None]*times
         self.Q = np.round(get_process_noise_matrix(self.delta_t, sigma=1))
         self.R = get_measurement_noise_matrix(sigma=500)
         self.H = measurement_matrix()
+        self.pmht_init_flag = True
     
-    def pmht_init(self, measurements):
+    def meas_manage(self, t_idx, meas):
+        
+        if len(self.meas_buff) >= self.batch_Tb:
+            for i in range(self.batch_Tg):
+                self.meas_buff.pop(0)
+                self.t_buff.pop(0)
+        self.meas_buff.append(meas)
+        self.t_buff.append(t_idx)
+        
+        return len(self.meas_buff) >= self.batch_Tb
+    
+    def pmht_init(self, target_prior):
         print("PMHT target init!")
         
-        target_state = np.zeros((measurements.shape[0], 4, 1), dtype=np.float)
-        self.P[0] = np.zeros((measurements.shape[0], 4, 4), dtype=np.float)
+        target_state = np.zeros((target_prior.shape[0], 4, 1), dtype=np.float)
+        self.P[0] = np.zeros((target_prior.shape[0], 4, 4), dtype=np.float)
         
-        for index, meas in enumerate(measurements):
-            target_state[index, 0, 0] = meas[0]
-            target_state[index, 2, 0] = meas[1]
+        for index, per_tgt_prior in enumerate(target_prior):
+            target_state[index, 0, 0] = per_tgt_prior[0]
+            target_state[index, 1, 0] = per_tgt_prior[1]
+            target_state[index, 2, 0] = per_tgt_prior[3]
+            target_state[index, 3, 0] = per_tgt_prior[4]
         self.target_state[0] = target_state
+
+        for t_idx in range(1, self.batch_Tg):    
+            for idx in range(len(self.target_state[t_idx-1])):
+                x = self.target_state[t_idx-1][idx]
+                P = self.P[t_idx-1][idx]
+                x, P = state_predict(x, P, self.Q, self.delta_t)
+
+                self.target_state[t_idx] = x
+                self.P[t_idx] = P
+
+        self.pmht_init_flag = False
         
     def run(self, t_idx, measurements):
         print(f"Runing PMHT T:{t_idx}")
 
-        if t_idx == 0:
-            self.pmht_init(measurements)
-        else:
+        meas_flag = self.meas_manage(t_idx, measurements)
+            
+        if meas_flag:
             x_predicts = []
             P_predicts = []
             for idx in range(len(self.target_state[t_idx-1])):

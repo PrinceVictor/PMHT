@@ -22,7 +22,8 @@ class SimulationGenerator:
 
         self.scene_area = self.scene_params.width*self.scene_params.height
 
-    def total_data_obtain(self, target_nums=None, total_times=None, lamda_para=None):
+    def total_data_obtain(self, target_nums=None, total_times=None, lamda_para=None, 
+                          batch_T=1):
         target_state = self.target_state_generator(target_nums, total_times)
         noises = self.noise_generator(lamda_para, total_times)
 
@@ -31,7 +32,7 @@ class SimulationGenerator:
         total_data = []
         assert len(target_state) == len(noises), 'length of target state is not equal with noise'
         for index in range(len(target_state)):
-            if index == 0:
+            if index >= batch_T:
                 curr_data = target_state[index][:, 0:sim_dim*3:3, :]
             else:
                 curr_data = np.concatenate((target_state[index][:, 0:sim_dim*3:3, :],

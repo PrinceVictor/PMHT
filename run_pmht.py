@@ -17,20 +17,25 @@ parser.add_argument('--log', action='store_true', default=False,
 args = parser.parse_args()
 
 def main(cfg, LOG):
+    
+    PMHT_batch_T = 3
 
     sim_gen = SimulationGenerator(cfg=cfg)
     
-    target_state, noises, total_data = sim_gen.total_data_obtain()
+    target_state, noises, total_data = \
+        sim_gen.total_data_obtain(batch_T=PMHT_batch_T)
     noise_expected = sim_gen.noise_expected()
 
     LOG.info(f"total times {len(total_data)}")
 
-    pmht_mananger = PMHT(times=len(total_data), 
+    pmht_mananger = PMHT(times=len(total_data),
+                         batch_T=PMHT_batch_T, 
                          noise_expected=noise_expected,
                          sample_T=cfg.RADAR.period)
 
-    for t_idx, data in enumerate(total_data):
-        pmht_mananger.run(t_idx, data)
+    pmht_mananger.pmht_init(target_state[0])
+    for t_idx in range(PMHT_batch_T, len(total_data)):
+        pmht_mananger.run(t_idx, total_data[t_idx])
     
     track_info = pmht_mananger.get_track_info()
 
