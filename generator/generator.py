@@ -32,11 +32,8 @@ class SimulationGenerator:
         total_data = []
         assert len(target_state) == len(noises), 'length of target state is not equal with noise'
         for index in range(len(target_state)):
-            if index >= batch_T:
-                curr_data = target_state[index][:, 0:sim_dim*3:3, :]
-            else:
-                curr_data = np.concatenate((target_state[index][:, 0:sim_dim*3:3, :],
-                                            noises[index][:, 0:sim_dim, :]), axis=0)
+            curr_data = np.concatenate((target_state[index][:, 0:sim_dim*3:3, :],
+                                        noises[index][:, 0:sim_dim, :]), axis=0)
             total_data.append(curr_data)
 
         return target_state, noises, total_data

@@ -26,8 +26,6 @@ def main(cfg, LOG):
         sim_gen.total_data_obtain(batch_T=PMHT_batch_T)
     noise_expected = sim_gen.noise_expected()
 
-    print(noise_expected)
-
     LOG.info(f"total times {len(total_data)}")
 
     pmht_mananger = PMHT(times=len(total_data),

@@ -29,9 +29,7 @@ class PMHT:
         self.t_buff = []
         self.P = [None]*times
         self.Q = np.round(get_process_noise_matrix(self.delta_t, sigma=0.85))
-        print(self.Q)
         self.R = get_measurement_noise_matrix(sigma=10)
-        print(self.R)
         self.H = measurement_matrix()
         self.pmht_init_flag = True
     
@@ -49,25 +47,28 @@ class PMHT:
     def pmht_init(self, target_prior):
         print("PMHT target init!")
         
-        target_state = np.zeros((target_prior.shape[0], 4, 1), dtype=np.float)
-        self.P[0] = np.zeros((target_prior.shape[0], 4, 4), dtype=np.float)
+        xs = np.zeros((target_prior.shape[0], 4, 1), dtype=np.float)
+        Ps = np.zeros((target_prior.shape[0], 4, 4), dtype=np.float)
         
         for index, per_tgt_prior in enumerate(target_prior):
-            target_state[index, 0, 0] = per_tgt_prior[0]
-            target_state[index, 1, 0] = per_tgt_prior[1]
-            target_state[index, 2, 0] = per_tgt_prior[3]
-            target_state[index, 3, 0] = per_tgt_prior[4]
-        self.target_state[0] = target_state
+            xs[index, 0, 0] = per_tgt_prior[0]
+            xs[index, 1, 0] = per_tgt_prior[1]
+            xs[index, 2, 0] = per_tgt_prior[3]
+            xs[index, 3, 0] = per_tgt_prior[4]
+        self.target_state[0] = xs
+        self.P[0] = Ps
 
         for t_idx in range(1, self.batch_Tg):    
             for idx in range(len(self.target_state[t_idx-1])):
                 x = self.target_state[t_idx-1][idx]
                 P = self.P[t_idx-1][idx]
+
                 x, P = state_predict(x, P, self.Q, self.delta_t)
+                xs[idx] = x
+                Ps[idx] = P
 
-                self.target_state[t_idx] = x
-                self.P[t_idx] = P
-
+            self.target_state[t_idx] = xs
+            self.P[t_idx] = Ps
         self.pmht_init_flag = False
         
     def run(self, t_idx, measurements):
@@ -76,17 +77,28 @@ class PMHT:
         meas_flag = self.meas_manage(t_idx, measurements)
             
         if meas_flag:
-            x_predicts = []
-            P_predicts = []
-            for idx in range(len(self.target_state[t_idx-1])):
-                x = self.target_state[t_idx-1][idx]
-                p = self.P[t_idx-1][idx]
-                x, p = state_predict(x, p, self.Q, self.delta_t)
-                x_predicts.append(x)
-                P_predicts.append(p)
+            print(f"Run one batch!")
+            
+            x_t_l = []
+            P_t_l = []
 
-            w_nsr = self.calculate_weight_s(t_idx, x_predicts, P_predicts, measurements)
-            zs, Rs = self.calculate_measures_and_covariance(w_nsr, measurements)
+            for idt in range(self.batch_Tg):
+                t_id = self.t_buff[idt]
+
+                x_predicts = []
+                P_predicts = []
+                for idx in range(len(self.target_state[t_id-1])):
+                    x = self.target_state[t_id-1][idx]
+                    p = self.P[t_id-1][idx]
+                    x, p = state_predict(x, p, self.Q, self.delta_t)
+                    x_predicts.append(x)
+                    P_predicts.append(p)
+                
+                x_t_l.append(x_predicts)
+                P_t_l.append(P_predicts)
+
+            w_nsr = self.calculate_weight_s(t_idx, x_t_l)
+            zs, Rs = self.calculate_measures_and_covariance(w_nsr)
             x_est, P_est = self.em_iteration(t_idx, x_predicts, P_predicts, zs, Rs)
 
             self.target_state[t_idx] = x_est
@@ -149,12 +161,27 @@ class PMHT:
         
         return zs, Rs
 
-    def calculate_weight_s(self, t_idx, x_predicts, P_predicts, measurements):
-        print("Target update!")
+    def calculate_weight_s(self, t_idx, x_t):
         
-        pi_s = self.get_prior_prob(t_idx, measurements)
+        print("Target update!")
+        pi_s_l = self.get_prior_prob(t_idx)
 
         w_nsr_list = []
+        for idx in range(self.batch_Tg):
+            z = self.meas_buff[idx]
+            t_id = self.t_buff[idx]
+            pi_s = pi_s_l[idx]
+            x_predicts = x_t[idx]
+
+            w_sr_list = []
+            for idx_s, x in enumerate(x_predicts):
+                w_sr_num = pi_s*compute_norm_prob(z, self.H@x, self.R)
+                w_sr_list.append(w_sr_num)
+            
+            w_sr_den = np.sum(w_sr_list)
+            if w_sr_den != 0:
+                w_sr_list = w_sr_list/w_sr_den
+
         for idx_r, z in enumerate(measurements):
 
             w_sr_list = []
@@ -181,17 +208,23 @@ class PMHT:
     def get_prior_prob(self, t, measurements):
         print("Compute prior probabilities!")
 
-        meas_size = measurements.shape[0]
-        target_size = self.target_state[t-1].shape[0]
-        expect_mu = self.noise_expected
+        pi_s_list = []
+        for idx in range(self.batch_Tg):
+            z = self.meas_buff[idx]
 
-        pd = compute_detection_prob(meas_size, target_size)
-        p_meas_size = compute_poisson_prob(expect_mu, meas_size)
-        p_meas_tag = compute_poisson_prob(expect_mu, np.max((meas_size-target_size, 0)))
+            meas_size = z.shape[0]
+            target_size = self.target_state[t-1].shape[0]
+            expect_mu = self.noise_expected
+
+            pd = compute_detection_prob(meas_size, target_size)
+            p_meas_size = compute_poisson_prob(expect_mu, meas_size)
+            p_meas_tag = compute_poisson_prob(expect_mu, np.max((meas_size-target_size, 0)))
+            
+            pi_s = pd/meas_size*p_meas_tag/(pd*p_meas_tag + (1-pd)*p_meas_size)
+
+            pi_s_list.append[pi_s]
         
-        pi_s = pd/meas_size*p_meas_tag/(pd*p_meas_tag + (1-pd)*p_meas_size)
-        
-        return pi_s
+        return pi_s_list
 
         
         
