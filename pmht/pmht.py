@@ -25,6 +25,7 @@ class PMHT:
         self.delta_t = sample_T
 
         self.target_state = [None]*times
+        self.cost = []
         self.meas_buff = []
         self.t_buff = []
         self.P = [None]*times
@@ -90,20 +91,32 @@ class PMHT:
     def get_track_info(self):
         return self.target_state
     
+    def em_iteration(self):
+
+        x_t_l, P_t_l = self.target_predict()
+        w_tnsr = self.calculate_weight_s(x_t_l)
+        zts, Rts = self.calculate_measures_and_covariance(w_tnsr)
+        x_est_l, P_est_l = self.batch_filter(x_t_l, P_t_l, zts, Rts)
+    
     def target_predict(self):
+        if len(self.cost) == 0:
+            self.cost = [None]*self.target_state[self.t_buff[0]-1]
 
         x_t_l = []
         P_t_l = []
-
         for idt in range(self.batch_Tg):
             t_id = self.t_buff[idt]
 
             x_predicts = []
             P_predicts = []
             for idx in range(len(self.target_state[t_id-1])):
-                x = self.target_state[t_id-1][idx]
-                p = self.P[t_id-1][idx]
-                x, p = state_predict(x, p, self.Q, self.delta_t)
+                if self.cost[idx] is not None and self.cost[idx] < 0.01:
+                    x = self.target_state[t_id][idx]
+                    p = self.P[t_id][idx]
+                else:    
+                    x = self.target_state[t_id-1][idx]
+                    p = self.P[t_id-1][idx]
+                    x, p = state_predict(x, p, self.Q, self.delta_t)
                 x_predicts.append(x)
                 P_predicts.append(p)
             
@@ -112,44 +125,47 @@ class PMHT:
         
         return x_t_l, P_t_l
 
-    def batch_filter(self, t_idx, x_t_l, P_t_l, zts, Rts):
+    def batch_filter(self, x_t_l, P_t_l, zts, Rts):
+        x_est_t_l = []
+        P_est_t_l = []
 
         for idt in range(self.batch_Tg):
-            
+        
             x_predicts = x_t_l[idt]
             P_predicts = P_t_l[idt]
             zs = zts[idt]
             Rs = Rts[idt]
-
-            x_est = np.zeros((len(x_predicts), 4, 1), dtype=np.float)
-            P_est = np.zeros((len(x_predicts), 4, 4), dtype=np.float)
             
             for idx_s in range(len(x_predicts)):
 
-                while True:
+                if self.cost[idx_s] is not None and self.cost[idx_s] < 0.01:
+                    continue
+                else:
+
                     x = x_predicts[idx_s]
                     P = P_predicts[idx_s]
                     z = zs[idx_s]
                     R = Rs[idx_s]
 
                     if z is not None:
-                    
                         x1, P1 = state_update(x, P, z, R)
-                        cost = (x1-x).T @ inv(self.Q) @ (x1-x)
-
                         x_predicts[idx_s] = x1
                         P_predicts[idx_s] = P1
 
-                        if cost <= 0.01:
-                            x_est[idx_s] = x1
-                            P_est[idx_s] = P1
-                            break
-                    else:
-                        x_est[idx_s] = x
-                        P_est[idx_s] = P
-                        break
+            x_est_t_l.append(x_predicts)
+            P_est_t_l.append(P_predicts)
+
+        return x_est_t_l, P_est_t_l
+    
+    def calculate_cost(self):
         
-        return x_est, P_est
+        for idt in range(self.batch_Tg):
+            t_id = self.t_buff[idt]
+            xn = self.target_state[t_id-1]
+            for idx in range(len(self.target_state[t_id-1])):
+             cost = (x1-x).T @ inv(self.Q) @ (x1-x)
+
+
 
     def calculate_measures_and_covariance(self, w_tnsr):
         print("synthetic measurements")
@@ -182,17 +198,17 @@ class PMHT:
         
         return zts, Rts
 
-    def calculate_weight_s(self, t_idx, x_t):
+    def calculate_weight_s(self, x_t_l):
         
         print("Target update!")
-        pi_s_l = self.get_prior_prob(t_idx)
 
         w_tnsr = []
         for idx in range(self.batch_Tg):
             measurements = self.meas_buff[idx]
+            x_predicts = x_t_l[idx]
+            
             t_id = self.t_buff[idx]
-            pi_s = pi_s_l[idx]
-            x_predicts = x_t[idx]
+            pi_s = self.get_prior_prob(t_id)
 
             w_nsr_list = []            
             for idx_r, z in enumerate(measurements):
@@ -219,7 +235,7 @@ class PMHT:
 
         return w_tnsr
     
-    def get_prior_prob(self, t, measurements):
+    def get_prior_prob(self, t):
         print("Compute prior probabilities!")
 
         pi_s_list = []
