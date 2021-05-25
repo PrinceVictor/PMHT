@@ -25,6 +25,7 @@ class PMHT:
         self.delta_t = sample_T
 
         self.target_state = [None]*times
+        self.em_iteration_times = 0
         self.cost = []
         self.meas_buff = []
         self.t_buff = []
@@ -80,6 +81,7 @@ class PMHT:
         if meas_flag:
             print(f"Run one batch!")
 
+            self.em_iteration_times = 0
             x_t_l, P_t_l = self.target_predict()
             w_tnsr = self.calculate_weight_s(t_idx, x_t_l)
             zts, Rts = self.calculate_measures_and_covariance(w_tnsr)
@@ -93,14 +95,19 @@ class PMHT:
     
     def em_iteration(self):
 
-        x_t_l, P_t_l = self.target_predict()
-        w_tnsr = self.calculate_weight_s(x_t_l)
-        zts, Rts = self.calculate_measures_and_covariance(w_tnsr)
-        x_est_l, P_est_l = self.batch_filter(x_t_l, P_t_l, zts, Rts)
+        iteration_flag = True
+
+        while iteration_flag:
+            x_t_l, P_t_l = self.target_predict()
+            w_tnsr = self.calculate_weight_s(x_t_l)
+            zts, Rts = self.calculate_measures_and_covariance(w_tnsr)
+            x_est_l, P_est_l = self.batch_filter(x_t_l, P_t_l, zts, Rts)
+            iteration_flag = self.calculate_cost(x_est_l)
+            self.update_info(x_est_l, P_est_l)
     
     def target_predict(self):
-        if len(self.cost) == 0:
-            self.cost = [None]*self.target_state[self.t_buff[0]-1]
+        if self.em_iteration_times == 0:
+            self.cost = [None]*len(self.target_state[self.t_buff[0]-1])
 
         x_t_l = []
         P_t_l = []
@@ -109,7 +116,7 @@ class PMHT:
 
             x_predicts = []
             P_predicts = []
-            for idx in range(len(self.target_state[t_id-1])):
+            for idx in range(len(self.target_state[self.t_buff[0]-1])):
                 if self.cost[idx] is not None and self.cost[idx] < 0.01:
                     x = self.target_state[t_id][idx]
                     p = self.P[t_id][idx]
@@ -157,14 +164,36 @@ class PMHT:
 
         return x_est_t_l, P_est_t_l
     
-    def calculate_cost(self):
+    def calculate_cost(self, x_est_t_l):
         
+        if self.em_iteration_times == 0:
+            return True
+
+        cost_flag = False
+        cost_t_l = []
         for idt in range(self.batch_Tg):
             t_id = self.t_buff[idt]
-            xn = self.target_state[t_id-1]
-            for idx in range(len(self.target_state[t_id-1])):
-             cost = (x1-x).T @ inv(self.Q) @ (x1-x)
+            
+            cost_l = []
+            for idx in range(len(self.target_state[t_id])):
+                xn_1 = self.target_state[t_id][idx]
+                xn = x_est_t_l[idt][idx]
+                cost = (xn-xn_1).T @ inv(self.Q) @ (xn-xn_1)
+                cost_l.append(cost)
+            
+            cost_t_l.append(cost_l)
+        
+        for idx in range(len(self.target_state[t_id])):
 
+            cost_l = []
+            for idt in range(self.batch_Tg):
+                cost_l.append(cost_t_l[idt][idx])
+            
+            self.cost[idx] = np.sum(cost_l)/self.batch_Tg
+            if self.cost[idx] >=0.01 and cost_flag==False:
+                cost_flag = True
+        
+        return cost_flag
 
 
     def calculate_measures_and_covariance(self, w_tnsr):
@@ -234,6 +263,16 @@ class PMHT:
             w_tnsr.append(w_nsr)
 
         return w_tnsr
+    
+    def update_info(self, x_est_l, P_est_l):
+        
+        for idt in range(self.batch_Tg):
+            t_id = self.t_buff[idt]
+
+            for idx in range(len(self.target_state[t_id])):
+                self.target_state[t_id][idx] = x_est_l[idt][idx]
+                self.P[t_id][idx] = P_est_l[idt][idx]
+
     
     def get_prior_prob(self, t):
         print("Compute prior probabilities!")
