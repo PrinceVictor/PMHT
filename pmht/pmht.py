@@ -78,132 +78,146 @@ class PMHT:
             
         if meas_flag:
             print(f"Run one batch!")
-            
-            x_t_l = []
-            P_t_l = []
 
-            for idt in range(self.batch_Tg):
-                t_id = self.t_buff[idt]
-
-                x_predicts = []
-                P_predicts = []
-                for idx in range(len(self.target_state[t_id-1])):
-                    x = self.target_state[t_id-1][idx]
-                    p = self.P[t_id-1][idx]
-                    x, p = state_predict(x, p, self.Q, self.delta_t)
-                    x_predicts.append(x)
-                    P_predicts.append(p)
-                
-                x_t_l.append(x_predicts)
-                P_t_l.append(P_predicts)
-
-            w_nsr = self.calculate_weight_s(t_idx, x_t_l)
-            zs, Rs = self.calculate_measures_and_covariance(w_nsr)
-            x_est, P_est = self.em_iteration(t_idx, x_predicts, P_predicts, zs, Rs)
+            x_t_l, P_t_l = self.target_predict()
+            w_tnsr = self.calculate_weight_s(t_idx, x_t_l)
+            zts, Rts = self.calculate_measures_and_covariance(w_tnsr)
+            x_est, P_est = self.batch_filter(t_idx, x_t_l, P_t_l, zts, Rts)
 
             self.target_state[t_idx] = x_est
             self.P[t_idx] = P_est
     
     def get_track_info(self):
         return self.target_state
+    
+    def target_predict(self):
 
-    def em_iteration(self, t_idx, x_predicts, P_predicts, zs, Rs):
+        x_t_l = []
+        P_t_l = []
 
-        x_est = np.zeros((len(x_predicts), 4, 1), dtype=np.float)
-        P_est = np.zeros((len(x_predicts), 4, 4), dtype=np.float)
+        for idt in range(self.batch_Tg):
+            t_id = self.t_buff[idt]
+
+            x_predicts = []
+            P_predicts = []
+            for idx in range(len(self.target_state[t_id-1])):
+                x = self.target_state[t_id-1][idx]
+                p = self.P[t_id-1][idx]
+                x, p = state_predict(x, p, self.Q, self.delta_t)
+                x_predicts.append(x)
+                P_predicts.append(p)
+            
+            x_t_l.append(x_predicts)
+            P_t_l.append(P_predicts)
         
-        for idx_s in range(len(x_predicts)):
+        return x_t_l, P_t_l
 
-            while True:
-                x = x_predicts[idx_s]
-                P = P_predicts[idx_s]
-                z = zs[idx_s]
-                R = Rs[idx_s]
+    def batch_filter(self, t_idx, x_t_l, P_t_l, zts, Rts):
 
-                if z is not None:
-                
-                    x1, P1 = state_update(x, P, z, R)
-                    cost = (x1-x).T @ inv(self.Q) @ (x1-x)
+        for idt in range(self.batch_Tg):
+            
+            x_predicts = x_t_l[idt]
+            P_predicts = P_t_l[idt]
+            zs = zts[idt]
+            Rs = Rts[idt]
 
-                    x_predicts[idx_s] = x1
-                    P_predicts[idx_s] = P1
+            x_est = np.zeros((len(x_predicts), 4, 1), dtype=np.float)
+            P_est = np.zeros((len(x_predicts), 4, 4), dtype=np.float)
+            
+            for idx_s in range(len(x_predicts)):
 
-                    if cost <= 0.01:
-                        x_est[idx_s] = x1
-                        P_est[idx_s] = P1
+                while True:
+                    x = x_predicts[idx_s]
+                    P = P_predicts[idx_s]
+                    z = zs[idx_s]
+                    R = Rs[idx_s]
+
+                    if z is not None:
+                    
+                        x1, P1 = state_update(x, P, z, R)
+                        cost = (x1-x).T @ inv(self.Q) @ (x1-x)
+
+                        x_predicts[idx_s] = x1
+                        P_predicts[idx_s] = P1
+
+                        if cost <= 0.01:
+                            x_est[idx_s] = x1
+                            P_est[idx_s] = P1
+                            break
+                    else:
+                        x_est[idx_s] = x
+                        P_est[idx_s] = P
                         break
-                else:
-                    x_est[idx_s] = x
-                    P_est[idx_s] = P
-                    break
         
         return x_est, P_est
 
-    def calculate_measures_and_covariance(self, w_nsr, measurements):
+    def calculate_measures_and_covariance(self, w_tnsr):
         print("synthetic measurements")
 
-        zs = [None]*len(w_nsr)
-        Rs = [None]*len(w_nsr)
-        for idx_s, wns in enumerate(w_nsr):
+        zts = [None]*len(w_tnsr)
+        Rts = [None]*len(w_tnsr)
+        for idt in range(self.batch_Tg):
+            w_nsr = w_tnsr[idt]
+            measurements = self.meas_buff[idt]
+            zs = [None]*len(w_nsr)
+            Rs = [None]*len(w_nsr)
 
-            temp_z = np.mat(np.zeros((2, 1), dtype=np.float))
-            for idx_r, wnsr in enumerate(wns):
-                temp_z += wnsr*measurements[idx_r]
+            for idx_s, wns in enumerate(w_nsr):
+
+                temp_z = np.zeros((2, 1), dtype=np.float)
+                for idx_r, wnsr in enumerate(wns):
+                    temp_z += wnsr*measurements[idx_r]
+                
+                sum_wns = np.sum(wns)
+
+                if sum_wns != 0:
+                    temp_z = temp_z/sum_wns
+                    temp_R = self.R/sum_wns
+
+                    zs[idx_s] = temp_z
+                    Rs[idx_s] = temp_R
             
-            sum_wns = np.sum(wns)
-
-            if sum_wns != 0:
-                temp_z = temp_z/sum_wns
-                temp_R = self.R/sum_wns
-
-                zs[idx_s] = temp_z
-                Rs[idx_s] = temp_R
+            zts[idt] = zs
+            Rts[idt] = Rs
         
-        return zs, Rs
+        return zts, Rts
 
     def calculate_weight_s(self, t_idx, x_t):
         
         print("Target update!")
         pi_s_l = self.get_prior_prob(t_idx)
 
-        w_nsr_list = []
+        w_tnsr = []
         for idx in range(self.batch_Tg):
-            z = self.meas_buff[idx]
+            measurements = self.meas_buff[idx]
             t_id = self.t_buff[idx]
             pi_s = pi_s_l[idx]
             x_predicts = x_t[idx]
 
-            w_sr_list = []
-            for idx_s, x in enumerate(x_predicts):
-                w_sr_num = pi_s*compute_norm_prob(z, self.H@x, self.R)
-                w_sr_list.append(w_sr_num)
-            
-            w_sr_den = np.sum(w_sr_list)
-            if w_sr_den != 0:
-                w_sr_list = w_sr_list/w_sr_den
+            w_nsr_list = []            
+            for idx_r, z in enumerate(measurements):
 
-        for idx_r, z in enumerate(measurements):
-
-            w_sr_list = []
-            for idx_s, x in enumerate(x_predicts):
+                w_sr_list = []
+                for idx_s, x in enumerate(x_predicts):
+                    w_sr_num = pi_s*compute_norm_prob(z, self.H@x, self.R)
+                    w_sr_list.append(w_sr_num)
                 
-                w_sr_num = pi_s*compute_norm_prob(z, self.H@x, self.R)
-                w_sr_list.append(w_sr_num)
-
-            w_sr_den = np.sum(w_sr_list)
-            if w_sr_den != 0:
-                w_sr_list = w_sr_list/w_sr_den
+                w_sr_den = np.sum(w_sr_list)
+                if w_sr_den != 0:
+                    w_sr_list = w_sr_list/w_sr_den
+                
+                w_nsr_list.append(w_sr_list)
             
-            w_nsr_list.append(w_sr_list)
-        
-        w_nsr = []
-        for idx_s in range(len(x_predicts)):
-            w_sr = []
-            for idx_r in range(len(measurements)):
-                w_sr.append(w_nsr_list[idx_r][idx_s])
-            w_nsr.append(w_sr)
+            w_nsr = []
+            for idx_s in range(len(x_predicts)):
+                w_sr = []
+                for idx_r in range(len(measurements)):
+                    w_sr.append(w_nsr_list[idx_r][idx_s])
+                w_nsr.append(w_sr)
+            
+            w_tnsr.append(w_nsr)
 
-        return w_nsr
+        return w_tnsr
     
     def get_prior_prob(self, t, measurements):
         print("Compute prior probabilities!")
