@@ -24,7 +24,7 @@ class PMHT:
         self.noise_expected = noise_expected
         self.delta_t = sample_T
 
-        self.target_state = [None]*times
+        self.target_state = [None]* (times - times%self.batch_Tg)
         self.em_iteration_times = 0
         self.cost = []
         self.meas_buff = []
@@ -59,19 +59,24 @@ class PMHT:
             xs[index, 3, 0] = per_tgt_prior[4]
         self.target_state[0] = xs
         self.P[0] = Ps
-
-        for t_idx in range(1, self.batch_Tg):    
-            for idx in range(len(self.target_state[t_idx-1])):
+        
+        for t_idx in range(1, self.batch_Tg):
+            xs = np.zeros((target_prior.shape[0], 4, 1), dtype=np.float)
+            Ps = np.zeros((target_prior.shape[0], 4, 4), dtype=np.float)    
+            
+            for idx in range(len(xs)):
                 x = self.target_state[t_idx-1][idx]
                 P = self.P[t_idx-1][idx]
 
                 x, P = state_predict(x, P, self.Q, self.delta_t)
+                
                 xs[idx] = x
                 Ps[idx] = P
 
             self.target_state[t_idx] = xs
             self.P[t_idx] = Ps
         self.pmht_init_flag = False
+        print(self.target_state)
         
     def run(self, t_idx, measurements):
         print(f"Runing PMHT T:{t_idx}")
@@ -82,18 +87,14 @@ class PMHT:
             print(f"Run one batch!")
 
             self.em_iteration_times = 0
-            x_t_l, P_t_l = self.target_predict()
-            w_tnsr = self.calculate_weight_s(t_idx, x_t_l)
-            zts, Rts = self.calculate_measures_and_covariance(w_tnsr)
-            x_est, P_est = self.batch_filter(t_idx, x_t_l, P_t_l, zts, Rts)
-
-            self.target_state[t_idx] = x_est
-            self.P[t_idx] = P_est
+            self.em_iteration()
+            
     
     def get_track_info(self):
         return self.target_state
     
     def em_iteration(self):
+        print("EM iteration!")
 
         iteration_flag = True
 
@@ -109,26 +110,29 @@ class PMHT:
         if self.em_iteration_times == 0:
             self.cost = [None]*len(self.target_state[self.t_buff[0]-1])
 
-        x_t_l = []
-        P_t_l = []
+        x_t_l = [self.target_state[self.t_buff[0]-1]]
+        P_t_l = [self.P[self.t_buff[0]-1]]
         for idt in range(self.batch_Tg):
             t_id = self.t_buff[idt]
 
             x_predicts = []
             P_predicts = []
-            for idx in range(len(self.target_state[self.t_buff[0]-1])):
+            for idx in range(len(x_t_l[-1])):
                 if self.cost[idx] is not None and self.cost[idx] < 0.01:
                     x = self.target_state[t_id][idx]
                     p = self.P[t_id][idx]
                 else:    
-                    x = self.target_state[t_id-1][idx]
-                    p = self.P[t_id-1][idx]
+                    x = x_t_l[-1][idx]
+                    p = P_t_l[-1][idx]
                     x, p = state_predict(x, p, self.Q, self.delta_t)
                 x_predicts.append(x)
                 P_predicts.append(p)
             
             x_t_l.append(x_predicts)
             P_t_l.append(P_predicts)
+        
+        x_t_l.pop(0)
+        P_t_l.pop(0)
         
         return x_t_l, P_t_l
 
@@ -165,8 +169,10 @@ class PMHT:
         return x_est_t_l, P_est_t_l
     
     def calculate_cost(self, x_est_t_l):
+        # print("Calculate cost!")
         
         if self.em_iteration_times == 0:
+            self.em_iteration_times += 1
             return True
 
         cost_flag = False
@@ -190,6 +196,7 @@ class PMHT:
                 cost_l.append(cost_t_l[idt][idx])
             
             self.cost[idx] = np.sum(cost_l)/self.batch_Tg
+            print(f"id: {idx} cost: {self.cost[idx]}")
             if self.cost[idx] >=0.01 and cost_flag==False:
                 cost_flag = True
         
@@ -197,7 +204,7 @@ class PMHT:
 
 
     def calculate_measures_and_covariance(self, w_tnsr):
-        print("synthetic measurements")
+        # print("synthetic measurements")
 
         zts = [None]*len(w_tnsr)
         Rts = [None]*len(w_tnsr)
@@ -229,15 +236,13 @@ class PMHT:
 
     def calculate_weight_s(self, x_t_l):
         
-        print("Target update!")
-
         w_tnsr = []
         for idx in range(self.batch_Tg):
             measurements = self.meas_buff[idx]
             x_predicts = x_t_l[idx]
             
             t_id = self.t_buff[idx]
-            pi_s = self.get_prior_prob(t_id)
+            pi_s = self.get_prior_prob(measurements.shape[0], len(x_predicts))
 
             w_nsr_list = []            
             for idx_r, z in enumerate(measurements):
@@ -268,32 +273,26 @@ class PMHT:
         
         for idt in range(self.batch_Tg):
             t_id = self.t_buff[idt]
-
-            for idx in range(len(self.target_state[t_id])):
-                self.target_state[t_id][idx] = x_est_l[idt][idx]
-                self.P[t_id][idx] = P_est_l[idt][idx]
+        
+            self.target_state[t_id] = np.stack(x_est_l[idt], axis=0)
+            self.P[t_id] = np.stack(P_est_l[idt], axis=0)
 
     
-    def get_prior_prob(self, t):
-        print("Compute prior probabilities!")
+    def get_prior_prob(self, z_size, x_size):
+        # print("Compute prior probabilities!")
 
-        pi_s_list = []
-        for idx in range(self.batch_Tg):
-            z = self.meas_buff[idx]
+        meas_size = z_size
+        target_size = x_size
+        expect_mu = self.noise_expected
 
-            meas_size = z.shape[0]
-            target_size = self.target_state[t-1].shape[0]
-            expect_mu = self.noise_expected
-
-            pd = compute_detection_prob(meas_size, target_size)
-            p_meas_size = compute_poisson_prob(expect_mu, meas_size)
-            p_meas_tag = compute_poisson_prob(expect_mu, np.max((meas_size-target_size, 0)))
-            
-            pi_s = pd/meas_size*p_meas_tag/(pd*p_meas_tag + (1-pd)*p_meas_size)
-
-            pi_s_list.append[pi_s]
+        pd = compute_detection_prob(meas_size, target_size)
+        p_meas_size = compute_poisson_prob(expect_mu, meas_size)
+        p_meas_tag = compute_poisson_prob(expect_mu, np.max((meas_size-target_size, 0)))
         
-        return pi_s_list
+        pi_s = pd/meas_size*p_meas_tag/(pd*p_meas_tag + (1-pd)*p_meas_size)
+
+
+        return pi_s
 
         
         
