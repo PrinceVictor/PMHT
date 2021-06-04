@@ -76,7 +76,6 @@ class PMHT:
             self.target_state[t_idx] = xs
             self.P[t_idx] = Ps
         self.pmht_init_flag = False
-        print(self.target_state)
         
     def run(self, t_idx, measurements):
         print(f"Runing PMHT T:{t_idx}")
