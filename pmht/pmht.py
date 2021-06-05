@@ -20,16 +20,17 @@ class PMHT:
     def __init__(self, times, batch_T=1, noise_expected=10, sample_T=5):
         print("Construct PMHT!")
         self.batch_Tg = batch_T
-        self.batch_Tb = self.batch_Tg + 2
+        self.batch_buff = 2
+        self.batch_Tb = self.batch_Tg + self.batch_buff
         self.noise_expected = noise_expected
         self.delta_t = sample_T
-
-        self.target_state = [None]* (times - times%self.batch_Tg)
+        self.times = times-self.batch_buff
+        self.target_state = [None]* (self.times - self.times%self.batch_Tg)
         self.em_iteration_times = 0
         self.cost = []
         self.meas_buff = []
         self.t_buff = []
-        self.P = [None]*times
+        self.P = [None]*(self.times - self.times%self.batch_Tg)
         self.Q = np.round(get_process_noise_matrix(self.delta_t, sigma=0.85))
         self.R = get_measurement_noise_matrix(sigma=10)
         self.H = measurement_matrix()

@@ -34,7 +34,7 @@ _C.TARGET = CN()
 
 _C.TARGET.start_pos_mode = "fix"
 _C.TARGET.state = "CV"
-_C.TARGET.time = 1*200
+_C.TARGET.time = 1*150
 _C.TARGET.frequency =  1.0/_C.RADAR.period
 _C.TARGET.nums = 1
 _C.TARGET.start_speed = 80*1.85/3.6

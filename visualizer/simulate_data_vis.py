@@ -38,11 +38,11 @@ class DrawSimTarget:
 
         if gt is not None:
             gt = np.concatenate(gt, axis=0)
+            gt = gt[:-3]
             ax.scatter(x=gt[:, 0, :], y=gt[:, 3, :], 
                        c='green', marker='^', s=15, label='GT')
         
         if track is not None:
-            print(track[-3])
             track = np.concatenate(track, axis=0)
             ax.scatter(x=track[:, 0, :], y=track[:, 2, :], 
                        c='red', marker='x', s=10, label='tracked')
