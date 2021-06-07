@@ -23,7 +23,7 @@ class DrawSimTarget:
 
         self.total_vis_2d(total_data)
     
-    def run_pmht(self, total_raw=None, gt=None, track=None):
+    def run_pmht(self, total_raw=None, gt=None, track=None, txt=''):
 
         fig = plt.figure()
         ax = plt.axes()
@@ -31,24 +31,29 @@ class DrawSimTarget:
         ax.set_xlim(self.scene_area_x[0], self.scene_area_x[1])
         ax.set_ylim(self.scene_area_y[0], self.scene_area_y[1])
 
+        total_raw = np.concatenate(total_raw, axis=0)
+        gt = np.concatenate(gt, axis=0)
+        track = np.concatenate(track, axis=0)
+
         if total_raw is not None:
-            total_raw = np.concatenate(total_raw, axis=0)
             ax.scatter(x=total_raw[:, 0, :], y=total_raw[:, 1, :],
                        c='blue', marker='o', s=1, label='meas')
 
         if gt is not None:
-            gt = np.concatenate(gt, axis=0)
-            gt = gt[:-3]
+            gt = gt[:len(track)]            
             ax.scatter(x=gt[:, 0, :], y=gt[:, 3, :], 
                        c='green', marker='^', s=15, label='GT')
         
         if track is not None:
-            track = np.concatenate(track, axis=0)
             ax.scatter(x=track[:, 0, :], y=track[:, 2, :], 
                        c='red', marker='x', s=10, label='tracked')
         
+        pos_rmse = np.sqrt(np.mean((gt[:, 0, :] - track[:, 0, :])**2 + (gt[:, 3, :] - track[:, 2, :])**2))
+        str = f'PMHT for {txt} RMSE:{pos_rmse:.3f}'
+        plt.title(str)
         plt.legend(loc='upper right')
-        plt.show()
+        # plt.show()
+        plt.savefig('./result/'+txt+'.png', dpi=400, bbox_inches='tight')
 
 
     def total_vis_2d(self, data):

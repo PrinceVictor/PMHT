@@ -36,15 +36,17 @@ _C.TARGET.start_pos_mode = "fix"
 _C.TARGET.state = "CV"
 _C.TARGET.time = 1*150
 _C.TARGET.frequency =  1.0/_C.RADAR.period
-_C.TARGET.nums = 1
+_C.TARGET.nums = 3
 _C.TARGET.start_speed = 80*1.85/3.6
 # area sequence x y z
 _C.TARGET.area = [[-0.5e5+_C.RADAR.pos[0], 0.5e5+_C.RADAR.pos[0]],
                   [0.2e4+_C.RADAR.pos[1], 1e5+_C.RADAR.pos[1]],
                   [0.0e5+_C.RADAR.pos[2], _C.SCENE.height]]
+_C.TARGET.meas_sigma = 15
 
 _C.FALSE_ALARM = CN()
 _C.FALSE_ALARM.expect_x_per_uint = 10**-6.5
+
 
 def get_cfg_defaults():
 

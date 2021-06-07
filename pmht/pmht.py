@@ -17,7 +17,7 @@ def compute_poisson_prob(expect, k):
 
 
 class PMHT:
-    def __init__(self, times, batch_T=1, noise_expected=10, sample_T=5):
+    def __init__(self, times, batch_T=1, noise_expected=10, sample_T=5, meas_sigma=10):
         print("Construct PMHT!")
         self.batch_Tg = batch_T
         self.batch_buff = 2
@@ -32,7 +32,7 @@ class PMHT:
         self.t_buff = []
         self.P = [None]*(self.times - self.times%self.batch_Tg)
         self.Q = np.round(get_process_noise_matrix(self.delta_t, sigma=0.85))
-        self.R = get_measurement_noise_matrix(sigma=10)
+        self.R = get_measurement_noise_matrix(sigma=meas_sigma)
         self.H = measurement_matrix()
         self.pmht_init_flag = True
     
@@ -54,10 +54,10 @@ class PMHT:
         Ps = np.zeros((target_prior.shape[0], 4, 4), dtype=np.float)
         
         for index, per_tgt_prior in enumerate(target_prior):
-            xs[index, 0, 0] = per_tgt_prior[0]
-            xs[index, 1, 0] = per_tgt_prior[1]
-            xs[index, 2, 0] = per_tgt_prior[3]
-            xs[index, 3, 0] = per_tgt_prior[4]
+            xs[index, 0, 0] = per_tgt_prior[0] + np.random.normal(0, 100, 1)
+            xs[index, 1, 0] = per_tgt_prior[1] + np.random.normal(0, 5, 1)
+            xs[index, 2, 0] = per_tgt_prior[3] + np.random.normal(0, 100, 1)
+            xs[index, 3, 0] = per_tgt_prior[4] + np.random.normal(0, 5, 1)
         self.target_state[0] = xs
         self.P[0] = Ps
         
