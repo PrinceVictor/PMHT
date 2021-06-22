@@ -28,21 +28,21 @@ def main(cfg, LOG):
 
     LOG.info(f"total times {len(total_data)}")
 
-    pmht_mananger1 = PMHT(times=len(total_data),
-                         batch_T=1, 
-                         noise_expected=noise_expected,
-                         sample_T=cfg.RADAR.period,
-                         meas_sigma=cfg.TARGET.meas_sigma)
+    # pmht_mananger1 = PMHT(times=len(total_data),
+    #                      batch_T=1, 
+    #                      noise_expected=noise_expected,
+    #                      sample_T=cfg.RADAR.period,
+    #                      meas_sigma=cfg.TARGET.meas_sigma)
 
-    pmht_mananger1.pmht_init(target_state[0])
-    for t_idx in range(1, len(total_data)):
-        pmht_mananger1.run(t_idx, total_data[t_idx])
+    # pmht_mananger1.pmht_init(target_state[0])
+    # for t_idx in range(1, len(total_data)):
+    #     pmht_mananger1.run(t_idx, total_data[t_idx])
     
-    track_info1 = pmht_mananger1.get_track_info()
+    # track_info1 = pmht_mananger1.get_track_info()
 
-    draw1 = DrawSimTarget(cfg=cfg)
-    draw1.run_pmht(total_data, target_state, track_info1, 
-                   f'Target Nums={cfg.TARGET.nums} batch T=1')
+    # draw1 = DrawSimTarget(cfg=cfg)
+    # draw1.run_pmht(total_data, target_state, track_info1, 
+    #                f'Target Nums={cfg.TARGET.nums} batch T=1')
 
     pmht_mananger2 = PMHT(times=len(total_data),
                          batch_T=3, 

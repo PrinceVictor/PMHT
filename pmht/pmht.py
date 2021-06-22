@@ -9,7 +9,6 @@ def compute_detection_prob(meas_size, target_size):
     return 1.0 if meas_size>= target_size else meas_size/target_size
 
 def compute_norm_prob(z, y, R):
-
     return 1/(2*np.pi*(det(R)**0.5))*np.exp(np.array(-0.5*(z-y).T@inv(R)@(z-y))[0][0])
 
 def compute_poisson_prob(expect, k):
