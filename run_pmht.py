@@ -2,6 +2,7 @@ import numpy as np
 import argparse
 
 from pmht.pmht import PMHT
+from pmht.track import MOT
 from generator.generator import SimulationGenerator
 from visualizer.simulate_data_vis import DrawSimTarget
 
@@ -43,6 +44,13 @@ def main(cfg, LOG):
     # draw1 = DrawSimTarget(cfg=cfg)
     # draw1.run_pmht(total_data, target_state, track_info1, 
     #                f'Target Nums={cfg.TARGET.nums} batch T=1')
+
+    mot_track = MOT(times=len(total_data), keep_T=3)
+
+    for t_id, data in enumerate(total_data):
+        mot_track.run_track(t_id, data)
+
+    raise SystemExit
 
     pmht_mananger2 = PMHT(times=len(total_data),
                          batch_T=3, 
