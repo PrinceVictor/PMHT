@@ -45,7 +45,8 @@ def main(cfg, LOG):
     # draw1.run_pmht(total_data, target_state, track_info1, 
     #                f'Target Nums={cfg.TARGET.nums} batch T=1')
 
-    mot_track = MOT(times=len(total_data), keep_T=3)
+    mot_track = MOT(times=len(total_data), 
+                    delta_t=cfg.RADAR.period, keep_T=3)
 
     for t_id, data in enumerate(total_data):
         mot_track.run_track(t_id, data)
