@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+import copy
+
 import pmht.kalman as kalman
 
 class Target:
@@ -69,7 +71,7 @@ class MOT:
         self.keep_T = keep_T
         self.target_id_seed = 0
         self.delta_t = delta_t
-        self.cost_threshold = 1000
+        self.cost_threshold = 300
 
         self.R = kalman.get_measurement_noise_matrix(sigma=meas_sigma)
     
@@ -93,6 +95,9 @@ class MOT:
             self.create_new_targets(t_id, assignment)
         
         print(f"total target num: {len(self.targets[t_id])}")
+        # for x_id in range(3):
+        #     target = self.targets[t_id][x_id]
+        #     print(f"target id: {target.id}, target state:\n{target.state}")
     
     def get_measurements(self, data):
         self.meas_buff.append(data)
@@ -111,7 +116,7 @@ class MOT:
         
         target_nums = len(self.targets[t_id-1])
 
-        self.targets[t_id] = self.targets[t_id-1]   
+        self.targets[t_id] = copy.deepcopy(self.targets[t_id-1]) 
         for x_id in range(target_nums):
             self.targets[t_id][x_id].state_predict()
             
@@ -139,8 +144,10 @@ class MOT:
                                            self.meas_buff[t_id][y_id])
                 cost_mat[x_id][y_id] = cost
         
+        # np.set_printoptions(threshold=np.inf)
+        # print(cost_mat[:3, :3])
+        # print(self.meas_buff[t_id][:3])
 
-        
         row_id, col_id = linear_sum_assignment(cost_mat)
         
         for i in range(len(row_id)):
@@ -162,7 +169,7 @@ class MOT:
                 target.state_update(self.meas_buff[t_id][meas_id], 
                                     self.R)
             
-            self.targets[t_id][x_id] = target
+            # self.targets[t_id][x_id] = target
     
     def create_new_targets(self, t_id, assignment):
         print(f"Create New Targets!")

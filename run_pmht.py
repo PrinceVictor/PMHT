@@ -48,9 +48,12 @@ def main(cfg, LOG):
     mot_track = MOT(times=len(total_data), 
                     delta_t=cfg.RADAR.period, keep_T=3,
                     meas_sigma=cfg.TARGET.meas_sigma)
-
+    
     for t_id, data in enumerate(total_data):
         mot_track.run_track(t_id, data)
+
+        # if t_id >= 3:
+        #     raise SystemExit
     
     mot_track.statistics()
 
