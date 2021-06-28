@@ -51,6 +51,8 @@ def main(cfg, LOG):
 
     for t_id, data in enumerate(total_data):
         mot_track.run_track(t_id, data)
+    
+    mot_track.statistics()
 
     raise SystemExit
 

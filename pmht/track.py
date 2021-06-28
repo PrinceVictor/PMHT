@@ -52,6 +52,8 @@ class Target:
         
         if self.unmatched_times >= 3:
             self.vanish = 1
+            self.tracked = 0
+            self.candidate = 0
         elif self.keep_times>=3 and self.occur_times<=5:
             self.tracked = 1
             self.keep_times = 0
@@ -87,6 +89,10 @@ class MOT:
             self.targets_predict(t_id)
             assignment = self.data_association(t_id)
             self.targets_update(t_id, assignment)
+            self.delete_targets(t_id)
+            self.create_new_targets(t_id, assignment)
+        
+        print(f"total target num: {len(self.targets[t_id])}")
     
     def get_measurements(self, data):
         self.meas_buff.append(data)
@@ -124,7 +130,8 @@ class MOT:
         meas_num = len(self.meas_buff[t_id])
 
         cost_mat = np.zeros(shape=(target_num, meas_num), dtype=np.float)
-        assignment = [-1] * target_num
+        assignment = np.zeros(shape=(target_num), dtype=np.int)
+        assignment.fill(-1)
 
         for x_id in range(target_num):
             for y_id in range(meas_num):
@@ -149,18 +156,45 @@ class MOT:
         for x_id, target in enumerate(self.targets[t_id]):
             
             meas_id = assignment[x_id]
-            if meas_id == 1:
+            if meas_id == -1:
                 target.state_update()
             else: 
                 target.state_update(self.meas_buff[t_id][meas_id], 
                                     self.R)
+            
+            self.targets[t_id][x_id] = target
     
     def create_new_targets(self, t_id, assignment):
-        
+        print(f"Create New Targets!")
+
         for y_id, meas in enumerate(self.meas_buff[t_id]):
             if y_id not in assignment:
-                print(y_id)
+                target = Target(id=self.create_target_id(), delta_t=self.delta_t)
+                target.state[0] = meas[0]
+                target.state[2] = meas[1]
+                self.targets[t_id].append(target)
         
-        raise SystemExit
+    def delete_targets(self, t_id):
+        print(f"Delete Targets!")
+
+        targets_num = len(self.targets[t_id])
+        print(f"before delete {targets_num}")
+
+        tracked_count = 0
+        erased_count = 0
+        for x_id in reversed(range(targets_num)):
+
+            if self.targets[t_id][x_id].vanish == 1:
+                self.targets[t_id].pop(x_id)
+                erased_count += 1
+            elif self.targets[t_id][x_id].tracked == 1:
+                tracked_count += 1
+        
+        print(f"after delete {len(self.targets[t_id])} erased {erased_count} real tracked {tracked_count}")
+    
+    def statistics(self):
+        for t_id, targets in enumerate(self.targets):
+            print(f"T:{t_id} targets num {len(targets)}")
+
 
 
