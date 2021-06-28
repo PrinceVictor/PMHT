@@ -85,7 +85,8 @@ class MOT:
             self.track_init()
         else:
             self.targets_predict(t_id)
-            self.data_association(t_id)
+            assignment = self.data_association(t_id)
+            self.targets_update(t_id, assignment)
     
     def get_measurements(self, data):
         self.meas_buff.append(data)
@@ -153,5 +154,13 @@ class MOT:
             else: 
                 target.state_update(self.meas_buff[t_id][meas_id], 
                                     self.R)
+    
+    def create_new_targets(self, t_id, assignment):
+        
+        for y_id, meas in enumerate(self.meas_buff[t_id]):
+            if y_id not in assignment:
+                print(y_id)
+        
+        raise SystemExit
 
 
