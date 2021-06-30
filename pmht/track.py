@@ -203,5 +203,18 @@ class MOT:
         for t_id, targets in enumerate(self.targets):
             print(f"T:{t_id} targets num {len(targets)}")
 
+    def get_targets(self, t_id):
+
+        targets_list = []
+        for x_id, target in enumerate(self.targets[t_id]):
+            if target.tracked == 1:
+                targets_list.append(target)
+        
+        return targets_list
+
+        
+
+
+
 
 
