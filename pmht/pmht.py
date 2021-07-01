@@ -4,6 +4,7 @@ from numpy.linalg import inv, det
 from scipy.stats import poisson, norm
 
 from .kalman import *
+from pmht.track import MOT
 
 def compute_detection_prob(meas_size, target_size):
     return 1.0 if meas_size>= target_size else meas_size/target_size
@@ -33,7 +34,13 @@ class PMHT:
         self.Q = np.round(get_process_noise_matrix(self.delta_t, sigma=0.85))
         self.R = get_measurement_noise_matrix(sigma=meas_sigma)
         self.H = measurement_matrix()
-        self.pmht_init_flag = True
+        
+        self.pmht_init_flag = False
+        self.targets = []
+
+        self.mot_track = MOT(times=times, 
+                             delta_t=sample_T, keep_T=3,
+                             meas_sigma=meas_sigma)
     
     def meas_manage(self, t_idx, meas):
         
@@ -79,14 +86,19 @@ class PMHT:
         
     def run(self, t_idx, measurements):
         print(f"Runing PMHT T:{t_idx}")
+        if self.pmht_run_flag:
+            meas_flag = self.meas_manage(t_idx, measurements)
 
-        meas_flag = self.meas_manage(t_idx, measurements)
-            
-        if meas_flag:
-            print(f"Run one batch!")
+        if not self.pmht_run_flag:
+            self.mot_track(t_idx, measurements)
+            targets_list = self.get_targets(t_idx, measurements)
+            if len(targets_list):
+                self.pmht_run_flag = True
 
+        if meas_flag:        
             self.em_iteration_times = 0
             self.em_iteration()
+            self.pmht_run_flag = False
             
     
     def get_track_info(self):

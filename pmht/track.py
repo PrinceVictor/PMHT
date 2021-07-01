@@ -6,8 +6,9 @@ import copy
 import pmht.kalman as kalman
 
 class Target:
-    def __init__(self, id, delta_t):
+    def __init__(self, id, t_id, delta_t):
         self.id = id
+        self.t_id = t_id
         self.delta_t = delta_t
         self.state = np.zeros((4, 1), dtype=np.float)
         self.P = np.zeros((4, 4), dtype=np.float)
@@ -29,8 +30,8 @@ class Target:
         self.state = x_pre
         self.P = P_pre
 
-    def state_update(self, meas=None, R=None):
-        self.status_update(meas)
+    def state_update(self, t_id, meas=None, R=None):
+        self.status_update(t_id, meas)
 
         if meas is not None:
             x_est, P_est = kalman.state_update(self.state, self.P,
@@ -39,8 +40,9 @@ class Target:
             self.P = P_est
             
 
-    def status_update(self, meas_flag):
+    def status_update(self, t_id, meas_flag):
         self.occur_times += 1
+        self.t_id = t_id
 
         if meas_flag is None:
             self.unmatched_times += 1
@@ -164,9 +166,10 @@ class MOT:
             
             meas_id = assignment[x_id]
             if meas_id == -1:
-                target.state_update()
+                target.state_update(t_id)
             else: 
-                target.state_update(self.meas_buff[t_id][meas_id], 
+                target.state_update(t_id, 
+                                    self.meas_buff[t_id][meas_id],
                                     self.R)
             
             # self.targets[t_id][x_id] = target
@@ -176,7 +179,9 @@ class MOT:
 
         for y_id, meas in enumerate(self.meas_buff[t_id]):
             if y_id not in assignment:
-                target = Target(id=self.create_target_id(), delta_t=self.delta_t)
+                target = Target(id=self.create_target_id(),
+                                t_id=t_id,
+                                delta_t=self.delta_t)
                 target.state[0] = meas[0]
                 target.state[2] = meas[1]
                 self.targets[t_id].append(target)

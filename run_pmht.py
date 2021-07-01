@@ -29,17 +29,24 @@ def main(cfg, LOG):
 
     LOG.info(f"total times {len(total_data)}")
 
-    # pmht_mananger1 = PMHT(times=len(total_data),
-    #                      batch_T=1, 
-    #                      noise_expected=noise_expected,
-    #                      sample_T=cfg.RADAR.period,
-    #                      meas_sigma=cfg.TARGET.meas_sigma)
+    pmht_mananger1 = PMHT(times=len(total_data),
+                         batch_T=1, 
+                         noise_expected=noise_expected,
+                         sample_T=cfg.RADAR.period,
+                         meas_sigma=cfg.TARGET.meas_sigma)
 
-    # pmht_mananger1.pmht_init(target_state[0])
-    # for t_idx in range(1, len(total_data)):
-    #     pmht_mananger1.run(t_idx, total_data[t_idx])
+    # mot_track = MOT(times=len(total_data), 
+    #                 delta_t=cfg.RADAR.period, keep_T=3,
+    #                 meas_sigma=cfg.TARGET.meas_sigma)
     
-    # track_info1 = pmht_mananger1.get_track_info()
+    # for t_id, data in enumerate(total_data):
+    #     mot_track.run_track(t_id, data)
+    #     pmht_mananger1.run(t_id, data)
+    pmht_mananger1.pmht_init(target_state[0])
+    for t_idx in range(1, len(total_data)):
+        pmht_mananger1.run(t_idx, total_data[t_idx])
+    
+    track_info1 = pmht_mananger1.get_track_info()
 
     # draw1 = DrawSimTarget(cfg=cfg)
     # draw1.run_pmht(total_data, target_state, track_info1, 
