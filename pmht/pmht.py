@@ -25,22 +25,24 @@ class PMHT:
         self.noise_expected = noise_expected
         self.delta_t = sample_T
         self.times = times-self.batch_buff
-        self.target_state = [None]* (self.times - self.times%self.batch_Tg)
+        self.target_state = [None]*self.times
         self.em_iteration_times = 0
         self.cost = []
         self.meas_buff = []
         self.t_buff = []
-        self.P = [None]*(self.times - self.times%self.batch_Tg)
+        self.P = [None]*self.times
         self.Q = np.round(get_process_noise_matrix(self.delta_t, sigma=0.85))
         self.R = get_measurement_noise_matrix(sigma=meas_sigma)
         self.H = measurement_matrix()
         
         self.pmht_init_flag = False
-        self.targets = []
+        self.pmht_run_flag = False
+        self.targets_list = []
 
         self.mot_track = MOT(times=times, 
                              delta_t=sample_T, keep_T=3,
                              meas_sigma=meas_sigma)
+                            
     
     def meas_manage(self, t_idx, meas):
         
@@ -85,44 +87,75 @@ class PMHT:
         self.pmht_init_flag = False
         
     def run(self, t_idx, measurements):
-        print(f"Runing PMHT T:{t_idx}")
-        if self.pmht_run_flag:
-            meas_flag = self.meas_manage(t_idx, measurements)
-
+        print(f"\nRuning PMHT T:{t_idx}")
+        self.mot_track.run_track(t_idx, measurements)
+        
+        meas_flag = False
         if not self.pmht_run_flag:
-            self.mot_track(t_idx, measurements)
-            targets_list = self.get_targets(t_idx, measurements)
-            if len(targets_list):
+            self.targets_list = self.mot_track.get_targets(t_idx)
+            if len(self.targets_list):
                 self.pmht_run_flag = True
 
+        elif self.pmht_run_flag:
+            meas_flag = self.meas_manage(t_idx, measurements)
+
+        print(f"flag pmht run {self.pmht_run_flag} meas flag {meas_flag}")
         if meas_flag:        
             self.em_iteration_times = 0
-            self.em_iteration()
-            self.pmht_run_flag = False
+            targets_ids = self.em_iteration(self.targets_list)
+            self.update_targets(targets_ids)
             
-    
+            self.pmht_run_flag = False
+            self.targets_list.clear()
+            
+    def update_targets(self, targets_ids):
+        print("update targets")
+
+        print(targets_ids)
+        for i in range(self.batch_Tg):
+            t_id = self.t_buff[i]
+            targets = self.mot_track.targets[t_id]
+
+            for x_id, target in enumerate(targets):
+                target_id = target.id
+                if target_id in targets_ids:
+                    index = targets_ids.index(target_id)        
+                    target.state = self.target_state[t_id][index]
+                    target.P = self.P[t_id][index]
+            
+
     def get_track_info(self):
         return self.target_state
     
-    def em_iteration(self):
+    def em_iteration(self, targets):
         print("EM iteration!")
+
+        x_states = []
+        P = []
+        x_ids = []
+        for x_id, target in enumerate(targets):
+            x_states.append(target.state)
+            P.append(target.P)
+            x_ids.append(target.id)
 
         iteration_flag = True
 
         while iteration_flag:
-            x_t_l, P_t_l = self.target_predict()
+            x_t_l, P_t_l = self.target_predict(x_states, P)
             w_tnsr = self.calculate_weight_s(x_t_l)
             zts, Rts = self.calculate_measures_and_covariance(w_tnsr)
             x_est_l, P_est_l = self.batch_filter(x_t_l, P_t_l, zts, Rts)
             iteration_flag = self.calculate_cost(x_est_l)
             self.update_info(x_est_l, P_est_l)
+        
+        return x_ids
     
-    def target_predict(self):
+    def target_predict(self, targets, P):
         if self.em_iteration_times == 0:
-            self.cost = [None]*len(self.target_state[self.t_buff[0]-1])
+            self.cost = [None]*len(targets)
 
-        x_t_l = [self.target_state[self.t_buff[0]-1]]
-        P_t_l = [self.P[self.t_buff[0]-1]]
+        x_t_l = [targets]
+        P_t_l = [P]
         for idt in range(self.batch_Tg):
             t_id = self.t_buff[idt]
 

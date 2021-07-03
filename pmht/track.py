@@ -88,7 +88,7 @@ class MOT:
         self.get_measurements(meas)
 
         if t_id == 0:
-            self.track_init()
+            self.track_init(t_id)
         else:
             self.targets_predict(t_id)
             assignment = self.data_association(t_id)
@@ -104,12 +104,12 @@ class MOT:
     def get_measurements(self, data):
         self.meas_buff.append(data)
     
-    def track_init(self):
+    def track_init(self, t_id):
         print("Track initialization!!!")
 
         xs = np.zeros((self.meas_buff[0].shape[0], 4, 1), dtype=np.float)     
         for x_id, meas in enumerate(self.meas_buff[0]):
-            target = Target(id=self.create_target_id(), delta_t=self.delta_t)
+            target = Target(id=self.create_target_id(), t_id=t_id, delta_t=self.delta_t)
             target.state[0] = meas[0]
             target.state[2] = meas[1]
             self.targets[0].append(target)
