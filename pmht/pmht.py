@@ -52,55 +52,55 @@ class PMHT:
                 self.t_buff.pop(0)
         self.meas_buff.append(meas)
         self.t_buff.append(t_idx)
+        print(f"update meas: {len(self.meas_buff)}")
         
         return len(self.meas_buff) >= self.batch_Tb
     
-    def pmht_init(self, target_prior):
+    def pmht_init(self, t_id, target_prior):
         print("PMHT target init!")
         
-        xs = np.zeros((target_prior.shape[0], 4, 1), dtype=np.float)
-        Ps = np.zeros((target_prior.shape[0], 4, 4), dtype=np.float)
+        xs = np.zeros((len(target_prior), 4, 1), dtype=np.float)
+        Ps = np.zeros((len(target_prior), 4, 4), dtype=np.float)
         
         for index, per_tgt_prior in enumerate(target_prior):
-            xs[index, 0, 0] = per_tgt_prior[0] + np.random.normal(0, 100, 1)
-            xs[index, 1, 0] = per_tgt_prior[1] + np.random.normal(0, 5, 1)
-            xs[index, 2, 0] = per_tgt_prior[3] + np.random.normal(0, 100, 1)
-            xs[index, 3, 0] = per_tgt_prior[4] + np.random.normal(0, 5, 1)
-        self.target_state[0] = xs
-        self.P[0] = Ps
+            xs[index, 0, 0] = per_tgt_prior.state[0]
+            xs[index, 1, 0] = per_tgt_prior.state[1]
+            xs[index, 2, 0] = per_tgt_prior.state[2]
+            xs[index, 3, 0] = per_tgt_prior.state[3]
+        self.target_state[t_id] = xs
+        self.P[t_id] = Ps
         
-        for t_idx in range(1, self.batch_Tg):
-            xs = np.zeros((target_prior.shape[0], 4, 1), dtype=np.float)
-            Ps = np.zeros((target_prior.shape[0], 4, 4), dtype=np.float)    
+        # for t_idx in range(1, self.batch_Tg):
+        #     xs = np.zeros((target_prior.shape[0], 4, 1), dtype=np.float)
+        #     Ps = np.zeros((target_prior.shape[0], 4, 4), dtype=np.float)    
             
-            for idx in range(len(xs)):
-                x = self.target_state[t_idx-1][idx]
-                P = self.P[t_idx-1][idx]
+        #     for idx in range(len(xs)):
+        #         x = self.target_state[t_idx-1][idx]
+        #         P = self.P[t_idx-1][idx]
 
-                x, P = state_predict(x, P, self.Q, self.delta_t)
+        #         x, P = state_predict(x, P, self.Q, self.delta_t)
                 
-                xs[idx] = x
-                Ps[idx] = P
+        #         xs[idx] = x
+        #         Ps[idx] = P
 
-            self.target_state[t_idx] = xs
-            self.P[t_idx] = Ps
-        self.pmht_init_flag = False
+        #     self.target_state[t_idx] = xs
+        #     self.P[t_idx] = Ps
+        # self.pmht_init_flag = False
         
     def run(self, t_idx, measurements):
         print(f"\nRuning PMHT T:{t_idx}")
         self.mot_track.run_track(t_idx, measurements)
         
-        meas_flag = False
-        if not self.pmht_run_flag:
-            self.targets_list = self.mot_track.get_targets(t_idx)
-            if len(self.targets_list):
+        meas_flag = self.meas_manage(t_idx, measurements)
+        self.targets_list = self.mot_track.get_targets(t_idx+1-self.batch_Tg)
+        
+        if len(self.targets_list):
+            self.pmht_init(t_idx-self.batch_Tg, self.targets_list)
+            if meas_flag:
                 self.pmht_run_flag = True
 
-        elif self.pmht_run_flag:
-            meas_flag = self.meas_manage(t_idx, measurements)
-
         print(f"flag pmht run {self.pmht_run_flag} meas flag {meas_flag}")
-        if meas_flag:        
+        if meas_flag and self.pmht_run_flag:        
             self.em_iteration_times = 0
             targets_ids = self.em_iteration(self.targets_list)
             self.update_targets(targets_ids)

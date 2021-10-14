@@ -58,7 +58,7 @@ class Target:
             self.vanish = 1
             self.tracked = 0
             self.candidate = 0
-        elif self.keep_times>=3 and self.occur_times<=5:
+        elif self.keep_times>=3:
             self.tracked = 1
             self.keep_times = 0
             self.occur_times = 0
