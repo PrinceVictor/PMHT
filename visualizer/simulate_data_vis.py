@@ -55,8 +55,11 @@ class DrawSimTarget:
         str = f'PMHT for {txt}'
         plt.title(str)
         plt.legend(loc='upper right')
-        plt.show()
+        txt = '_'.join(txt.split(' '))
         plt.savefig('./result/'+txt+'.png', dpi=400, bbox_inches='tight')
+
+        plt.show()
+        
 
 
     def total_vis_2d(self, data):
