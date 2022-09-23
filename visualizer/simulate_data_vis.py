@@ -1,10 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from src.generator.generator import SimulationGenerator
-from src.config import gen_cfg
-
-
 class DrawSimTarget:
     def __init__(self, cfg=None):
         # gen_cfg.merge_from_file(cfg.yaml_file)
@@ -59,7 +55,7 @@ class DrawSimTarget:
         str = f'PMHT for {txt}'
         plt.title(str)
         plt.legend(loc='upper right')
-        # plt.show()
+        plt.show()
         plt.savefig('./result/'+txt+'.png', dpi=400, bbox_inches='tight')
 
 
